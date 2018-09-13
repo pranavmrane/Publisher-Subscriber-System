@@ -33,6 +33,7 @@ public class EventManager extends Thread {
 	// {subscriber1 = [topic1], subscriber2 = [topic1]}
 	private HashMap subscribersInfo = new HashMap();
 
+	// {topic1 = [event1, event2, event3], topic2 = [event11, event12, event13]]
 	public EventManager() {
 
     }
@@ -64,9 +65,10 @@ public class EventManager extends Thread {
                         ());
                 while (true) {
                     try {
-                        Object obj = in.readObject();
-                        if (obj instanceof Topic) {
-                            this.addTopic((Topic) obj);
+                        int code = in.readInt();
+                        if (code == 1) {
+                        	Topic newTopic = (Topic) in.readObject();
+                            this.addTopic(newTopic);
                         }
 
                         break;
@@ -93,6 +95,7 @@ public class EventManager extends Thread {
 	 * add new topic when received advertisement of new topic
 	 */
 	private void addTopic(Topic topic){
+		// TODO: Broadcast to everyone
         System.out.println(topic.getName());
         this.topicsInfo.put(topic.getName(), new HashMap());
         System.out.println(topicsInfo);

@@ -60,6 +60,7 @@ public class PubSubAgent implements Publisher, Subscriber{
 			clientSocket = new Socket("localhost", 4444);
 			ObjectOutputStream out = new ObjectOutputStream(clientSocket
 					.getOutputStream());
+			out.writeInt(1);
 			out.writeObject(newTopic);
 		}
 		catch (IOException e) {
@@ -71,5 +72,4 @@ public class PubSubAgent implements Publisher, Subscriber{
 		new PubSubAgent().advertise(new Topic(1, Arrays.asList("Test", "test"),"Test"));
 	}
 
-	
 }
