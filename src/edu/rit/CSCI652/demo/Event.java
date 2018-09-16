@@ -7,4 +7,8 @@ public class Event {
 	private Topic topic;
 	private String title;
 	private String content;
+
+	public String getTitle() {
+		return this.title;
+	}
 }

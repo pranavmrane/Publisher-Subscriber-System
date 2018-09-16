@@ -13,6 +13,10 @@ public class Topic implements Serializable {
 
 	}
 
+	public Topic(String name) {
+	    this.name = name;
+    }
+
 	public Topic(int id, List<String> keywords, String name) {
 		this.id = id;
 		this.keywords = keywords;
