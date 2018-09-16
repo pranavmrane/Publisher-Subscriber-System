@@ -55,6 +55,11 @@ public class SubscriberAgent extends Thread implements Subscriber {
                             newTopic.getName());
                     System.out.println(topicList);
                 }
+                // 1000 -> Receiving topics list and pending events if any.
+                else if (code == 1000) {
+                    topicList = (ArrayList<Topic>)in.readObject();
+                    System.out.println("Received topics list: " + topicList);
+                }
             } catch (IOException e) {
                 System.out.println(e);
             } catch (ClassNotFoundException e) {
@@ -105,10 +110,28 @@ public class SubscriberAgent extends Thread implements Subscriber {
 
     }
 
+    public void ping() {
+        Socket clientSocket = null;
+        try {
+            System.out.println("Pinging.");
+            clientSocket = new Socket("localhost", 4444);
+            ObjectOutputStream out = new ObjectOutputStream(clientSocket
+                    .getOutputStream());
+            out.writeInt(1000);
+            out.writeUTF(Inet4Address.getLocalHost().getHostAddress() +
+                    ":" + this.port);
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     public static void main(String[] args) throws InterruptedException {
         SubscriberAgent subUI = new SubscriberAgent();
         subUI.startService();
         // TODO: while loop for Command Line interface
+        sleep(2000);
+        subUI.ping();
+        sleep(2000);
         Topic topic = new Topic("Test");
         subUI.subscribe(topic);
         while (true) {
