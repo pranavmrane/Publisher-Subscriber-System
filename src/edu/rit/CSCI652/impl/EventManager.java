@@ -38,6 +38,18 @@ public class EventManager extends Thread {
     static private HashMap<String, ArrayList<Event>> topicQueue = new
             HashMap<String, ArrayList<Event>>();
 
+    // [topic1, topic2];
+    static private ArrayList<Topic> topicList = new ArrayList<Topic>();
+
+    // Use to assign id's to topics.
+    // TODO: Avoid race condition here
+    static private int topicIndex = 1;
+
+    // Use to assign id's to events.
+    // TODO: Avoid race condition here
+    static private HashMap<String, Integer> eventIndex = new HashMap<String,
+            Integer>();
+
     public EventManager() {
 
     }
@@ -87,8 +99,18 @@ public class EventManager extends Thread {
                         Event newEvent = (Event) in.readObject();
                         this.notifySubscribers(newEvent);
                     }
-
-                    break;
+                    // 999 -> Publisher came online or New Publisher
+                    else if (code == 999) {
+                        String publisherId = in.readUTF();
+                        validatePublisher(publisherId);
+                        pingPublisher(publisherId);
+                    }
+                    // 1000 -> Subscriber came online or New Subscriber
+                    else if (code == 1000) {
+                        String subscriberId = in.readUTF();
+                        validateSubsciber(subscriberId);
+                        pingSubscriber(subscriberId);
+                    }
                 } catch (ClassNotFoundException e) {
                     e.printStackTrace();
                 }
@@ -106,15 +128,80 @@ public class EventManager extends Thread {
     }
 
     /*
+     * Provide Publisher with Topics list
+     * Might be offline or new Publisher
+     */
+    private void pingPublisher(String publisherId) {
+        System.out.println("Publisher " + publisherId + " came online. " +
+                "Sending" +
+                " list of topics.");
+        String destination = publisherId.split(":")[0];
+        int port = Integer.parseInt(publisherId.split(":")[1]);
+        try {
+            Socket sendSocket = new Socket(destination, port);
+            ObjectOutputStream out = new ObjectOutputStream(sendSocket
+                    .getOutputStream());
+            // 999 -> Sending Publisher list of topics
+            out.writeInt(999);
+            out.writeObject(topicList);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /*
+     * Provide Subscriber with Topics list
+     * Might be offline or new Subscriber
+     * Send pending events
+     */
+    private void pingSubscriber(String subscriberId) {
+        System.out.println("Subscriber " + subscriberId + " came online. " +
+                "Sending list of topics.");
+        String destination = subscriberId.split(":")[0];
+        int port = Integer.parseInt(subscriberId.split(":")[1]);
+        try {
+            Socket sendSocket = new Socket(destination, port);
+            ObjectOutputStream out = new ObjectOutputStream(sendSocket
+                    .getOutputStream());
+            // Sending subscriber list of topics and any pending events
+            out.writeInt(1000);
+            out.writeObject(topicList);
+
+            // TODO: Send pending events when this subscriber was offline
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /*
      * check if new publisher is sending a request
      */
-
     private void validatePublisher(String publisherId) {
+        // Just a returning Publisher, return
         if (publishersInfo.contains(publisherId)) {
             return;
-        } else {
+        }
+        // New publisher, add to list
+        else {
             System.out.println("Adding new Publisher: " + publisherId);
             publishersInfo.add(publisherId);
+        }
+    }
+
+    /*
+     * check if new subscriber is sending a request
+     */
+    private void validateSubsciber(String subscriberId) {
+        // Just a returning subscriber, return
+        if (subscribersInfo.containsKey(subscriberId)) {
+            return;
+        } // New subscriber, update data structures
+        else {
+            System.out.println("Adding new Subscriber: " + subscriberId);
+            subscribersInfo.put(subscriberId, new ArrayList<String>());
         }
     }
 
@@ -131,6 +218,7 @@ public class EventManager extends Thread {
         else {
             System.out.println("Adding topic: " + topic.getName());
             this.topicsInfo.put(topic.getName(), new HashMap<String, Integer>());
+            this.topicList.add(topic);
             System.out.println(topicsInfo);
             // TODO: Broadcast to everyone
             Socket sendSocket;
@@ -143,6 +231,7 @@ public class EventManager extends Thread {
                     sendSocket = new Socket(destination, port);
                     ObjectOutputStream out = new ObjectOutputStream
                             (sendSocket.getOutputStream());
+                    // 1 -> Advertising new topic
                     out.writeInt(1);
                     out.writeObject(topic);
                     out.close();
@@ -159,6 +248,7 @@ public class EventManager extends Thread {
                     sendSocket = new Socket(destination, port);
                     ObjectOutputStream out = new ObjectOutputStream
                             (sendSocket.getOutputStream());
+                    // 1 -> Advertising new topic
                     out.write(1);
                     out.writeObject(topic);
                 } catch (IOException e) {
@@ -181,7 +271,7 @@ public class EventManager extends Thread {
                 System.out.println("Already subscribed");
                 return;
             } else {
-                System.out.println("Subscribing " + sub + "to " + topicName);
+                System.out.println("Subscribing " + sub + " to " + topicName);
                 tmp.add(topicName);
                 subscribersInfo.put(sub, tmp);
             }

@@ -56,6 +56,11 @@ public class PublisherAgent extends Thread implements Publisher {
                             newTopic.getName());
                     System.out.println(topicList);
                 }
+                // 999 -> Receiving topics list
+                else if (code == 999) {
+                    topicList = (ArrayList<Topic>) in.readObject();
+                    System.out.println("Receiving topics list: " + topicList);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (ClassNotFoundException e) {
@@ -102,10 +107,30 @@ public class PublisherAgent extends Thread implements Publisher {
         }
     }
 
+    public void ping() {
+        Socket clientSocket = null;
+        try {
+            System.out.println("Pinging.");
+            clientSocket = new Socket("localhost", 4444);
+            ObjectOutputStream out = new ObjectOutputStream(clientSocket
+                    .getOutputStream());
+            out.writeInt(999);
+            out.writeUTF(Inet4Address.getLocalHost().getHostAddress() +
+                    ":" + this.port);
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void main(String[] args) throws InterruptedException {
         PublisherAgent pubUI = new PublisherAgent();
         pubUI.startService();
         // TODO: while loop for Command Line interface
+
+        sleep(2000);
+        pubUI.ping();
+        sleep(2000);
         Topic newTopic = new Topic(1, Arrays.asList("Test", "test"),
                 "Test");
         pubUI.advertise(newTopic);
