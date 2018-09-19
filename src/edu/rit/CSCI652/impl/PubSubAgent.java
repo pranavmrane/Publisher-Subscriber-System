@@ -69,7 +69,7 @@ public class PubSubAgent implements Publisher, Subscriber{
 	}
 
 	public static void main(String[] args) {
-		new PubSubAgent().advertise(new Topic(1, Arrays.asList("Test", "test"),"Test"));
+		new PubSubAgent().advertise(new Topic(Arrays.asList("Test", "test"),"Test"));
 	}
 
 }

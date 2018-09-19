@@ -17,8 +17,8 @@ public class Topic implements Serializable {
 	    this.name = name;
     }
 
-	public Topic(int id, List<String> keywords, String name) {
-		this.id = id;
+	public Topic(List<String> keywords, String name) {
+//		this.id = id;
 		this.keywords = keywords;
 		this.name = name;
 	}
@@ -26,4 +26,12 @@ public class Topic implements Serializable {
 	public String getName() {
 		return this.name;
 	}
+
+	public boolean checkIfKeyWordExists(String valueToBeChecked){
+	    return (keywords.contains(valueToBeChecked));
+    }
+
+    public void printKeyWords(){
+	    for(String keyword: keywords) System.out.println(keyword);
+    }
 }
