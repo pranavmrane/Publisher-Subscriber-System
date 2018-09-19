@@ -14,6 +14,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
+import java.util.Vector;
 
 public class SubscriberAgent extends Thread implements Subscriber {
     private ServerSocket ss = null;
@@ -63,6 +64,10 @@ public class SubscriberAgent extends Thread implements Subscriber {
                 else if (code == 1000) {
                     topicList = (ArrayList<Topic>)in.readObject();
                     System.out.println("Received topics list: " + topicList);
+                    Vector<Event> pendingEvents = (Vector<Event>) in
+                            .readObject();
+                    System.out.println("Received pending events: " +
+                            pendingEvents);
                 }
                 // 4-> Receiving subscribed topic list
                 else if (code == 4){
