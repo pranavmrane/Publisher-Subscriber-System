@@ -1,6 +1,7 @@
 package edu.rit.CSCI652.impl;
 
 
+import com.sun.org.apache.xpath.internal.SourceTree;
 import edu.rit.CSCI652.demo.Event;
 import edu.rit.CSCI652.demo.Subscriber;
 import edu.rit.CSCI652.demo.Topic;
@@ -106,7 +107,6 @@ public class EventManager extends Thread {
                     }
                     // 3 -> new event published, notify subscribers
                     else if (code == 3) {
-
                         Event newEvent = (Event) in.readObject();
                         this.notifySubscribers(newEvent);
                     }
@@ -115,7 +115,7 @@ public class EventManager extends Thread {
                         // System.out.println("code" + 4);
                         String subscriberId = in.readUTF();
                         // String inet = s.getInetAddress().getHostAddress();
-                        ArrayList<String> subscribedTopicsList =
+                        Vector<String> subscribedTopicsList =
                                 subscribersInfo.get(subscriberId);
                         System.out.println(subscribedTopicsList);
                         ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
@@ -129,7 +129,7 @@ public class EventManager extends Thread {
                         // TODO: Decipher future impact of removal on topicInfo
                         // Presently no action taken with position of subscriber
                         subscribersInfo.put(subscriberId,
-                                new ArrayList<String>());
+                                new Vector<String>());
                     }
                     // 6 -> unsubscribe a specific topic
                     else if (code == 6) {
@@ -167,17 +167,6 @@ public class EventManager extends Thread {
      * Questions: What to do with topic queue?
      */
     private void notifySubscribers(Event event) {
-
-        Socket sendSocket;
-        String destination;
-        int port;
-
-        HashMap<String, Integer> relevantSubscriber =
-                topicsInfo.get(event.getTopicForEvent().getName());
-
-        if(!relevantSubscriber.isEmpty()){
-            for (String s : relevantSubscriber.keySet()) {
-                try {
         // Find index for event
         String topicName = event.getTopicName();
         eventIndexLock.lock();
@@ -185,10 +174,11 @@ public class EventManager extends Thread {
         event.setId(index++);
         eventIndex.put(topicName, index);
         eventIndexLock.unlock();
-
+        System.out.println(index);
+        System.out.println(eventIndex);
         String destination;
         int port;
-        Socket sendSocket = new Socket();
+        Socket sendSocket = null;
         Vector<Event> tmpPendingEvents;
         for (String s : topicsInfo.get(topicName)) {
             try {
@@ -203,21 +193,18 @@ public class EventManager extends Thread {
                     sendSocket = new Socket(destination, port);
                     ObjectOutputStream out = new ObjectOutputStream
                             (sendSocket.getOutputStream());
-                    // 3 -> new event published, notify subscribers
+                    // 3 -> Advertising new topic
                     out.writeInt(3);
                     out.writeObject(event);
-                    out.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-		    offlineSubscribers.add(s);
-		    tmpPendingEvents = pendingEvents.get(s);
-    		    tmpPendingEvents.add(event);
-    		    pendingEvents.put(s, tmpPendingEvents);
                 }
+            } catch (IOException e) {
+                // Subscriber is offline. Handle it!
+                e.printStackTrace();
+                offlineSubscribers.add(s);
+                tmpPendingEvents = pendingEvents.get(s);
+                tmpPendingEvents.add(event);
+                pendingEvents.put(s, tmpPendingEvents);
             }
-        }
-        else {
-            System.out.print("Subscriber list for this event is empty");
         }
     }
 
@@ -286,7 +273,7 @@ public class EventManager extends Thread {
             // Sending subscriber list of topics and any pending events
             out.writeInt(1000);
             out.writeObject(topicList);
-            out.close();
+
             // TODO: Send pending events when this subscriber was offline
             out.writeObject(pendingEvents.get(subscriberId));
         }
@@ -347,7 +334,7 @@ public class EventManager extends Thread {
             return;
         }
 
-        ArrayList<String> subscriptions = subscribersInfo.get(subscriberName);
+        Vector<String> subscriptions = subscribersInfo.get(subscriberName);
         subscriptions.remove(topicName.getName());
         subscribersInfo.put(subscriberName, subscriptions);
     }
@@ -371,6 +358,7 @@ public class EventManager extends Thread {
             System.out.println("Adding topic: " + topic.getName());
             this.topicsInfo.put(topic.getName(), new Vector<String>());
             this.topicList.add(topic);
+            this.eventIndex.put(topic.getName(), 1);
             System.out.println(topicsInfo);
             // TODO: Broadcast to everyone
             Socket sendSocket;
@@ -441,6 +429,7 @@ public class EventManager extends Thread {
             Vector<String> tmp = new Vector<String>();
             tmp.add(topicName);
             subscribersInfo.put(sub, tmp);
+            pendingEvents.put(sub, new Vector<Event>());
         }
 
         Vector<String> topicInfo = topicsInfo.get(topicName);
@@ -476,10 +465,10 @@ public class EventManager extends Thread {
         System.out.println("showSubscribers");
         // Hashmap will contain Subscribers and Positions
         // We need only Subscriber names
-        HashMap<String, Integer> subscribersForTopic =
+        Vector<String> subscribersForTopic =
                 topicsInfo.get(topic.getName());
 
-        for (String key : subscribersForTopic.keySet()) {
+        for (String key : subscribersForTopic) {
             System.out.println(key);
         }
     }

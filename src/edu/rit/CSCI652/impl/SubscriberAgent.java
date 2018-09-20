@@ -11,7 +11,7 @@ import java.io.ObjectOutputStream;
 import java.net.Inet4Address;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.util.Vector;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.Vector;
@@ -20,7 +20,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
     private ServerSocket ss = null;
     static int numberOfThreads = 2;
     private int port = 11001;
-    static private ArrayList<Topic> topicList = new ArrayList<Topic>();
+    static private Vector<Topic> topicList = new Vector<Topic>();
 
     public SubscriberAgent() {
 
@@ -62,18 +62,17 @@ public class SubscriberAgent extends Thread implements Subscriber {
                 }
                 // 1000 -> Receiving topics list and pending events if any.
                 else if (code == 1000) {
-                    topicList = (ArrayList<Topic>)in.readObject();
+                    topicList = (Vector<Topic>)in.readObject();
                     System.out.println("Received topics list: " + topicList);
-                    Vector<Event> pendingEvents = (Vector<Event>) in
-                            .readObject();
+                    Vector<Event> pendingEvents = (Vector<Event>) in.readObject();
                     System.out.println("Received pending events: " +
                             pendingEvents);
                 }
                 // 4-> Receiving subscribed topic list
                 else if (code == 4){
                     // System.out.println("code" + 4);
-                    ArrayList<String> subscribedTopicsList =
-                            (ArrayList<String>)in.readObject();
+                    Vector<String> subscribedTopicsList =
+                            (Vector<String>)in.readObject();
                     if (subscribedTopicsList.size() == 0){
                         System.out.println("No Topics Subscribed");
                     }
@@ -176,8 +175,8 @@ public class SubscriberAgent extends Thread implements Subscriber {
         }
     }
 
-    public ArrayList<String> getSubscribedTopics() {
-        ArrayList<String> subscribedTopicsList = null;
+    public Vector<String> getSubscribedTopics() {
+        Vector<String> subscribedTopicsList = null;
         Socket clientSocket = null;
         try {
             System.out.println("Getting Subscribed Topics ");
@@ -191,7 +190,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
             out.flush();
 
             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
-            subscribedTopicsList = (ArrayList<String>) in.readObject();
+            subscribedTopicsList = (Vector<String>) in.readObject();
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -207,7 +206,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
     * */
     public void listSubscribedTopics() {
         // System.out.println("listSubscribedTopics");
-        ArrayList<String> subscribedTopicsList = this.getSubscribedTopics();
+        Vector<String> subscribedTopicsList = this.getSubscribedTopics();
         if (subscribedTopicsList.size() == 0){
             System.out.println("No Topics Subscribed");
         }
@@ -238,7 +237,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
 
     /*Simple Function to print a List of Strings*/
 
-    private void printList(ArrayList<String> contentList){
+    private void printList(Vector<String> contentList){
         // System.out.println("printList");
         int i = 0;
         for(String content : contentList) {
@@ -267,7 +266,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
         Scanner sc = new Scanner(System.in);
         int userInput = 0;
         boolean loopStatus = true;
-
+        sleep(2500);
         try {
             subUI.ping();
             while (loopStatus) {
@@ -307,7 +306,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
                         break;
                     case 5:
                         System.out.println("Select Topic Id for The Event");
-                        ArrayList<String> subscribedTopics = subUI.getSubscribedTopics();
+                        Vector<String> subscribedTopics = subUI.getSubscribedTopics();
                         subUI.printList(subscribedTopics);
                         Topic topic = new Topic(subscribedTopics.get(sc.nextInt()));
                         subUI.unsubscribe(topic);
