@@ -10,7 +10,7 @@ import java.io.ObjectOutputStream;
 import java.net.Inet4Address;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.util.Vector;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
@@ -20,7 +20,7 @@ public class PublisherAgent extends Thread implements Publisher {
     private ServerSocket ss = null;
     static int numberOfThreads = 2;
     private int port = 10000;
-    static private ArrayList<Topic> topicList = new ArrayList<Topic>();
+    static private Vector<Topic> topicList = new Vector<Topic>();
 
     public PublisherAgent() {
 
@@ -62,7 +62,7 @@ public class PublisherAgent extends Thread implements Publisher {
                 }
                 // 999 -> Receiving topics list
                 else if (code == 999) {
-                    topicList = (ArrayList<Topic>) in.readObject();
+                    topicList = (Vector<Topic>) in.readObject();
                     System.out.println("Receiving topics list: " + topicList);
                 }
             } catch (Exception e) {
@@ -145,7 +145,7 @@ public class PublisherAgent extends Thread implements Publisher {
         int userInput = 0;
 
         boolean loopStatus = true;
-
+        sleep(2500);
         try{
             pubUI.ping();
             pubUI.advertise(new Topic(Arrays.asList("India", "USA"),
@@ -175,7 +175,7 @@ public class PublisherAgent extends Thread implements Publisher {
                         String keywords = sc.next();
                         String[] keywordsArray = keywords.split(",");
                         List<String> keywordsList =
-                                new ArrayList<String>(Arrays.asList(keywordsArray));
+                                new Vector<String>(Arrays.asList(keywordsArray));
                         System.out.println("Generating new topic" + " Name: " +name+
                                 " keywords: " + keywords);
                          pubUI.advertise(new Topic(keywordsList,name));

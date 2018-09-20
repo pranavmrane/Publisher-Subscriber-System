@@ -17,10 +17,37 @@ public class Event implements Serializable {
 	    this.title = title;
 	    this.content = content;
     }
+	public Event() {
+
+	}
+
+	public Event(String title, Topic topic, String content) {
+		this.title = title;
+		this.topic = topic;
+		this.content = content;
+	}
+
+	public int getId() {
+		return this.id;
+	}
+
+	public void setId(int newId) {
+		this.id = newId;
+	}
 
 	public String getTitle() {
 		return this.title;
 	}
 
-	public Topic getTopicForEvent() {return this.topic;}
+	public Topic getTopicForEvent() {
+		return this.topic;
+	}
+
+	public String getTopicName() {
+		return this.topic.getName();
+	}
+
+	public Topic getTopic() {
+		return this.topic;
+	}
 }
