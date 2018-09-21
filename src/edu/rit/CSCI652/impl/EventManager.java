@@ -8,9 +8,13 @@ import edu.rit.CSCI652.demo.Topic;
 
 import java.io.*;
 import java.lang.reflect.Array;
+import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.StandardSocketOptions;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
@@ -42,8 +46,8 @@ public class EventManager extends Thread {
     static private ConcurrentHashMap<String, Vector<Event>> topicQueue = new
             ConcurrentHashMap<>();
 
-    static private ConcurrentHashMap<String, Vector<Event>> pendingEvents =
-            new ConcurrentHashMap<>();
+    static public ConcurrentHashMap<String, ConcurrentHashMap<Event,
+            LocalDateTime>> pendingEvents = new ConcurrentHashMap<>();
 
     // [topic1, topic2];
     static private Vector<Topic> topicList = new Vector<>();
@@ -123,6 +127,7 @@ public class EventManager extends Thread {
                 EventManager em = new EventManager(ss);
                 em.start();
             }
+            (new GarbageCollector()).start();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -227,12 +232,17 @@ public class EventManager extends Thread {
         String destination;
         int port;
         Socket sendSocket = null;
-        Vector<Event> tmpPendingEvents;
+        // LocalDateTime currentTime = null;
+        // Vector<Event> tmpPendingEvents;
+        ConcurrentHashMap<Event, LocalDateTime> tmpPendingEvents =
+                new ConcurrentHashMap<Event, LocalDateTime>();
         for (String s : topicsInfo.get(topicName)) {
             try {
                 if (offlineSubscribers.contains(s)) {
+                    LocalDateTime currentTime = null;
                     tmpPendingEvents = pendingEvents.get(s);
-                    tmpPendingEvents.add(event);
+                    currentTime = LocalDateTime.now();
+                    tmpPendingEvents.put(event, currentTime);
                     pendingEvents.put(s, tmpPendingEvents);
                 }
                 else {
@@ -247,11 +257,24 @@ public class EventManager extends Thread {
                 }
             } catch (IOException e) {
                 // Subscriber is offline. Handle it!
-                e.printStackTrace();
+                LocalDateTime currentTime  = null;
+                // e.printStackTrace();
                 offlineSubscribers.add(s);
-                tmpPendingEvents = pendingEvents.get(s);
-                tmpPendingEvents.add(event);
-                pendingEvents.put(s, tmpPendingEvents);
+                // tmpPendingEvents = new ConcurrentHashMap<Event, LocalDateTime>();
+
+                if(pendingEvents.contains(s)){
+                    tmpPendingEvents = pendingEvents.get(s);
+                    currentTime = LocalDateTime.now();
+                    tmpPendingEvents.put(event, currentTime);
+                    pendingEvents.put(s, tmpPendingEvents);
+                }
+                else{
+                    ConcurrentHashMap<Event, LocalDateTime> dataForNewSubs = new ConcurrentHashMap<Event, LocalDateTime>();
+                    currentTime = LocalDateTime.now();
+                    dataForNewSubs.put(event, currentTime);
+                    pendingEvents.put(s, dataForNewSubs);
+                }
+
             }
         }
     }
@@ -322,8 +345,29 @@ public class EventManager extends Thread {
             out.writeInt(1000);
             out.writeObject(topicList);
 
+            ConcurrentHashMap <Event, LocalDateTime> tmppendingEvents =
+                    pendingEvents.get(subscriberId);
+
+            Vector<Event> eventList = null;
+            if(tmppendingEvents!=null){
+                // There is definitely something inside pending events
+                // Initialise Vector of Events to be passed
+                eventList = new Vector<Event>();
+
+                // Save all events with Pending List
+                for(Event pendingEvent: tmppendingEvents.keySet()){
+                    eventList.add(pendingEvent);
+                }
+                // Remove Subscriber for Pending List
+                pendingEvents.remove(subscriberId);
+                out.writeObject(eventList);
+            }
+            else {
+                // Subscriber has no pending data
+                out.writeObject(eventList);
+            }
             // TODO: Send pending events when this subscriber was offline
-            out.writeObject(pendingEvents.get(subscriberId));
+
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -477,7 +521,7 @@ public class EventManager extends Thread {
             Vector<String> tmp = new Vector<String>();
             tmp.add(topicName);
             subscribersInfo.put(sub, tmp);
-            pendingEvents.put(sub, new Vector<Event>());
+            pendingEvents.put(sub, new ConcurrentHashMap<Event, LocalDateTime>());
         }
 
         Vector<String> topicInfo = topicsInfo.get(topicName);
@@ -568,7 +612,6 @@ public class EventManager extends Thread {
             while (loopStatus) {
                 System.out.println("Press 1 to remove Subscribers");
                 System.out.println("Press 2 to Show Subscriber for a topic");
-
                 System.out.println("Press 3 to view topics");
                 System.out.println("Press 4 to Exit the loop");
                 System.out.println("Please select an option: ");
@@ -604,8 +647,37 @@ public class EventManager extends Thread {
 
         }
 
-
-
-
     }
+}
+
+class GarbageCollector extends Thread{
+
+    public void run(){
+        LocalDateTime timeRightNow = null;
+        try {
+            while (true){
+                sleep(5*60*1000);
+                System.out.println("Garbage Collecter Active");
+                for(String subscriberName : EventManager.pendingEvents.keySet()){
+                    ConcurrentHashMap<Event, LocalDateTime> eventHistory =
+                            EventManager.pendingEvents.get(subscriberName);
+                    for(Event historicalEvent: eventHistory.keySet()){
+                        timeRightNow = LocalDateTime.now();
+                        // Remove an event that is more than 5 minutes old
+                        if(Duration.between(eventHistory.get(historicalEvent),
+                                timeRightNow).toMillis()>(5*60*1000)){
+                            System.out.println("Removed: " + historicalEvent.getTitle());
+                            eventHistory.remove(historicalEvent);
+                        }
+                    }
+                    EventManager.pendingEvents.put(subscriberName, eventHistory);
+                }
+            }
+        }
+        catch (InterruptedException e){
+            e.printStackTrace();
+        }
+    }
+
+
 }
