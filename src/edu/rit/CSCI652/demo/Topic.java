@@ -40,6 +40,19 @@ public class Topic implements Serializable {
     }
 
     public void printKeyWords(){
-	    for(String keyword: keywords) System.out.println(keyword);
+	    for(String keyword: keywords) System.out.println("\t\t" + keyword);
     }
+
+    public void printKeyWordsWithTopicName(){
+        for(String keyword: keywords) {
+            System.out.println("\t" + keyword + "(" + name + ")");
+        }
+    }
+
+    public void printAllVariables(){
+		System.out.println("\tTopic ID: " + this.id);
+		System.out.println("\tName: " + this.name);
+		System.out.println("\tKeyWords for this Topic are: ");
+		this.printKeyWords();
+	}
 }
