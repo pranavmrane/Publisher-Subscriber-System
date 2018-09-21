@@ -18,8 +18,10 @@ import java.util.Scanner;
 public class PublisherAgent extends Thread implements Publisher {
 
     private ServerSocket ss = null;
-    static int numberOfThreads = 2;
-    private int port = 10000;
+    static int numberOfThreads = 0;
+    private int listeningPort = 0;
+    private String sendingAddress = "";
+    private int sendingPort = 0;
     static private Vector<Topic> topicList = new Vector<Topic>();
 
     public PublisherAgent() {
@@ -32,9 +34,50 @@ public class PublisherAgent extends Thread implements Publisher {
     /*
     * Starts two threads. One to listen and other to accept orders
     * */
+
+    public void setAddresses(int listeningPort, int threadCount,
+                             String sendingAddress, int sendingPort){
+
+        this.listeningPort = listeningPort;
+        numberOfThreads = threadCount;
+        this.sendingAddress = sendingAddress;
+        this.sendingPort = sendingPort;
+    }
+
+    public void printAddresses(){
+        System.out.println("\tListening Port: " + listeningPort);
+        System.out.println("\tThread Count: " + numberOfThreads);
+        System.out.println("\tSending Address: " + sendingAddress);
+        System.out.println("\tSending Port: " + sendingPort);
+    }
+
+    public void printTopicVectors(Vector<Topic> list){
+
+        if(list.size() > 0){
+            for(Topic topic: list){
+                topic.printAllVariables();
+            }
+        }
+        else {
+            System.out.println("No Topics Available at this moment");
+        }
+    }
+
+    public void printEventVectors(Vector<Event> list){
+
+        if(list!=null){
+            for(Event topic: list){
+                topic.printAllVariables();
+            }
+        }
+        else {
+            System.out.println("No Pending Events Available at this moment");
+        }
+    }
+
     public void startService() {
         try {
-            ss = new ServerSocket(port);
+            ss = new ServerSocket(listeningPort);
             PublisherAgent pub = new PublisherAgent(ss);
             pub.start();
 
@@ -63,7 +106,8 @@ public class PublisherAgent extends Thread implements Publisher {
                 // 999 -> Receiving topics list
                 else if (code == 999) {
                     topicList = (Vector<Topic>) in.readObject();
-                    System.out.println("Receiving topics list: " + topicList);
+                    System.out.println("Receiving topics list: ");
+                    printTopicVectors(topicList);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -77,12 +121,12 @@ public class PublisherAgent extends Thread implements Publisher {
         Socket clientSocket = null;
         try {
             System.out.println("Publishing event: " + event.getTitle());
-            clientSocket = new Socket("localhost", 4444);
+            clientSocket = new Socket(sendingAddress, sendingPort);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket
                     .getOutputStream());
             out.writeInt(3);
             //out.writeUTF(Inet4Address.getLocalHost().getHostAddress() +
-            //        ":" + this.port);
+            //        ":" + this.listeningPort);
             out.writeObject(event);
             out.flush();
 
@@ -97,12 +141,12 @@ public class PublisherAgent extends Thread implements Publisher {
         Socket clientSocket = null;
         try {
             System.out.println("Advertising topic: " + newTopic.getName());
-            clientSocket = new Socket("localhost", 4444);
+            clientSocket = new Socket(sendingAddress, sendingPort);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket
                     .getOutputStream());
             out.writeInt(1);
             out.writeUTF(Inet4Address.getLocalHost().getHostAddress() +
-                    ":" + this.port);
+                    ":" + this.listeningPort);
             out.writeObject(newTopic);
             out.flush();
 
@@ -116,13 +160,13 @@ public class PublisherAgent extends Thread implements Publisher {
     public void ping() {
         Socket clientSocket = null;
         try {
-            System.out.println("Pinging.");
-            clientSocket = new Socket("localhost", 4444);
+            System.out.println("Pinging...");
+            clientSocket = new Socket(sendingAddress, sendingPort);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket
                     .getOutputStream());
             out.writeInt(999);
             out.writeUTF(Inet4Address.getLocalHost().getHostAddress() +
-                    ":" + this.port);
+                    ":" + this.listeningPort);
             out.flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -131,15 +175,45 @@ public class PublisherAgent extends Thread implements Publisher {
 
     /*Displays all the topics ever registered with event manager*/
     private void displayTopicWithNumbers (){
-        if(topicList.size() == 0) System.out.println("No Topics Present");
-        for (int i=0; i<topicList.size(); i++){
-            System.out.println(i + ":" + topicList.get(i).getName());
+        if(topicList.size() == 0) {
+            System.out.println("No Topics Present");
+        }
+        else {
+            System.out.println("The Topics Available are:");
+            for (int i=0; i<topicList.size(); i++){
+                System.out.println("\t" + i + ":" + topicList.get(i).getName());
+            }
         }
     }
 
     public static void main(String[] args) throws InterruptedException {
 
         PublisherAgent pubUI = new PublisherAgent();
+
+        if (args.length==8 && args[0].equals("-port") &&
+                args[2].equals("-threads") &&
+                args[4].equals("-eventManagerIP") &&
+                args[6].equals("-eventManagerPort")) {
+            try {
+                System.out.println("Setting Connection Variables:");
+                pubUI.setAddresses(Integer.parseInt(args[1]),
+                        Integer.parseInt(args[3]), args[5],
+                        Integer.parseInt(args[7]));
+                pubUI.printAddresses();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            System.err.println("Enter Command Like this: " +
+                    "PublisherAgent -port 10000 -threads 2 " +
+                    "-eventManagerIP localhost -eventManagerPort 4444");
+            System.err.println("Using Default Values");
+            pubUI.setAddresses(10000, 2,
+                    "localhost", 4444);
+            pubUI.printAddresses();
+        }
+
         pubUI.startService();
         Scanner sc = new Scanner(System.in);
         int userInput = 0;
@@ -150,18 +224,18 @@ public class PublisherAgent extends Thread implements Publisher {
             pubUI.ping();
             pubUI.advertise(new Topic(Arrays.asList("India", "USA"),
                     "World"));
+            sleep(900);
             pubUI.advertise(new Topic(Arrays.asList("Asia", "Europe"),
                     "Continent"));
             while(loopStatus){
-                // Temporary codes Used: 54, 55
                 // All other codes used to identify operations
-                sleep(900);
+
                 System.out.println("Press 1 to Advertise New Topic");
                 System.out.println("Press 2 to Publish New Event");
                 System.out.println("Press 3 to Ping");
                 System.out.println("Press 4 to view topics");
                 System.out.println("Press 5 to Exit the loop");
-                System.out.print("Please select an option: ");
+                System.out.println("Please select an option: ");
 
                 userInput = sc.nextInt();
 
@@ -176,11 +250,9 @@ public class PublisherAgent extends Thread implements Publisher {
                         String[] keywordsArray = keywords.split(",");
                         List<String> keywordsList =
                                 new Vector<String>(Arrays.asList(keywordsArray));
-                        System.out.println("Generating new topic" + " Name: " +name+
-                                " keywords: " + keywords);
+                        System.out.println("Generating new topic" + "\n\tName: " +name+
+                                "\n\tKeywords: " + keywords);
                          pubUI.advertise(new Topic(keywordsList,name));
-
-
 
 
                         break;
@@ -190,15 +262,15 @@ public class PublisherAgent extends Thread implements Publisher {
                         int topicId = sc.nextInt();
                         System.out.println("Enter Event Title");
                         String eventTitle = sc.next();
-                        System.out.println("Enter Event Id");
-                        int eid = sc.nextInt();
+//                        System.out.println("Enter Event Id");
+//                        int eid = sc.nextInt();
                         System.out.println("Enter Content(String) for Event");
                         String content = sc.next();
-                        System.out.println("Generating new Event"
-                                + " Title: " + eventTitle + " id: " + eid +
-                                " Topic: " + topicList.get(topicId).getName() +
-                                " content: " + content);
-                        pubUI.publish(new Event(eid, topicList.get(topicId), eventTitle, content));
+                        System.out.println("Generating new Event: "
+                                + "\n\tTitle: " + eventTitle +
+                                "\n\tTopic: " + topicList.get(topicId).getName() +
+                                "\n\tContent: " + content);
+                        pubUI.publish(new Event(topicList.get(topicId), eventTitle, content));
                         break;
                     case 3:
                         pubUI.ping();
