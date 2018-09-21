@@ -1,7 +1,7 @@
 package edu.rit.CSCI652.impl;
 
 
-import com.sun.org.apache.xpath.internal.SourceTree;
+//import com.sun.org.apache.xpath.internal.SourceTree;
 import edu.rit.CSCI652.demo.Event;
 import edu.rit.CSCI652.demo.Subscriber;
 import edu.rit.CSCI652.demo.Topic;
@@ -11,7 +11,6 @@ import java.lang.reflect.Array;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.StandardSocketOptions;
-import java.util.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
@@ -23,7 +22,9 @@ public class EventManager extends Thread {
      * Start the repo service
      */
     private ServerSocket ss = null;
-    static int numberOfThreads = 4;
+    static int numberOfThreads = 0;
+    private int listeningPort = 0;
+    private String listeningAddress = "";
 
     // {topic1={subscriber1:position, subscriber2: position}, topic2 = {}}
     // subscriber1 is IP:port
@@ -69,9 +70,55 @@ public class EventManager extends Thread {
         this.ss = ss;
     }
 
+    public void setAddresses(int listeningPort, int threadCount,
+                             String listeningAddress){
+
+        this.listeningPort = listeningPort;
+        numberOfThreads = threadCount;
+        this.listeningAddress = listeningAddress;
+    }
+
+    public void printAddresses(){
+        System.out.println("\tListening Port: " + listeningPort);
+        System.out.println("\tThread Count: " + numberOfThreads);
+        System.out.println("\tSending Address: " + listeningAddress);
+    }
+
+    public void printTopicsHashmap(){
+        for(String topicName: topicsInfo.keySet()){
+            System.out.println("\tTopic Name: " + topicName);
+            Vector<String> subscribersForTopic = topicsInfo.get(topicName);
+            if(subscribersForTopic.size()!=0){
+                for(String subscriberDetails: subscribersForTopic){
+                    String infoArray[] = subscriberDetails.split(":");
+                    System.out.println("\t\tSubscriber Address: " +
+                            infoArray[0]);
+                    System.out.println("\t\tSubscriber Port: " +
+                            infoArray[1]);
+                }
+            }
+        }
+    }
+
+    public void printSubscribersHashmap(){
+        for(String subscriberName: subscribersInfo.keySet()){
+            String infoArray[] = subscriberName.split(":");
+            System.out.println("\tSubscriber Address: " +
+                    infoArray[0]);
+            System.out.println("\tSubscriber Port: " +
+                    infoArray[1]);
+            Vector<String> topicsForSubscribers = subscribersInfo.get(subscriberName);
+            if(topicsForSubscribers.size()!=0){
+                for(String topicName: topicsForSubscribers){
+                    System.out.println("\t\tTopic Name:" + topicName);
+                }
+            }
+        }
+    }
+
     private void startService() {
         try {
-            ss = new ServerSocket(4444);
+            ss = new ServerSocket(listeningPort);
             for (int i = 0; i < numberOfThreads; i++) {
                 EventManager em = new EventManager(ss);
                 em.start();
@@ -117,7 +164,7 @@ public class EventManager extends Thread {
                         // String inet = s.getInetAddress().getHostAddress();
                         Vector<String> subscribedTopicsList =
                                 subscribersInfo.get(subscriberId);
-                        System.out.println(subscribedTopicsList);
+                        // System.out.println(subscribedTopicsList);
                         ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
                         out.writeObject(subscribedTopicsList);
                         out.flush();
@@ -133,7 +180,7 @@ public class EventManager extends Thread {
                     }
                     // 6 -> unsubscribe a specific topic
                     else if (code == 6) {
-                        System.out.println("code" + 6);
+                        // System.out.println("code" + 6);
                         String subscriberId = in.readUTF();
                         // String inet = s.getInetAddress().getHostAddress();
                         Topic topic = (Topic) in.readObject();
@@ -174,6 +221,7 @@ public class EventManager extends Thread {
         event.setId(index++);
         eventIndex.put(topicName, index);
         eventIndexLock.unlock();
+        System.out.println("notifySubscribers Print:");
         System.out.println(index);
         System.out.println(eventIndex);
         String destination;
@@ -319,8 +367,8 @@ public class EventManager extends Thread {
 
     private void unsubscribeTopic(String subscriberName, Topic topicName) {
 
-        System.out.println("<->: " + topicList);
-        System.out.println("<-1->: " + topicName);
+//        System.out.println("<->: " + topicList);
+//        System.out.println("<-1->: " + topicName);
 
         System.out.println("unsubscribeTopic");
         if (!subscribersInfo.containsKey(subscriberName)) {
@@ -359,7 +407,7 @@ public class EventManager extends Thread {
             this.topicsInfo.put(topic.getName(), new Vector<String>());
             this.topicList.add(topic);
             this.eventIndex.put(topic.getName(), 1);
-            System.out.println(topicsInfo);
+            printTopicsHashmap();
             // TODO: Broadcast to everyone
             Socket sendSocket;
             String destination;
@@ -440,8 +488,10 @@ public class EventManager extends Thread {
             topicsInfo.put(topicName, topicInfo);
         }
 
-        System.out.println("Current subscribers list: " + subscribersInfo);
-        System.out.println("Current subscribers per topic: " + topicsInfo);
+        System.out.println("Current subscribers list: ");
+        printSubscribersHashmap();
+        System.out.println("Current subscribers per topic: ");
+        printTopicsHashmap();
 
     }
 
@@ -456,6 +506,7 @@ public class EventManager extends Thread {
         subscribersInfo.remove(droppedSubscriber);
         topicsInfo.remove(droppedSubscriber);
         System.out.println(droppedSubscriber + " is removed");
+        printSubscribersHashmap();
     }
 
     /*
@@ -484,6 +535,29 @@ public class EventManager extends Thread {
 
     public static void main(String[] args) {
         EventManager eventManager = new EventManager();
+
+        if (args.length==6 && args[0].equals("-port") &&
+                args[2].equals("-threads") &&
+                args[4].equals("-eventManagerIP")) {
+            try {
+                System.out.println("Setting Connection Variables:");
+                eventManager.setAddresses(Integer.parseInt(args[1]),
+                        Integer.parseInt(args[3]), args[5]);
+                eventManager.printAddresses();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            System.err.println("Enter Command Like this: " +
+                    "EventManager -port 4444 -threads 4 " +
+                    "-eventManagerIP localhost");
+            System.out.println("Using Default Values");
+            eventManager.setAddresses(4444, 4, "localhost");
+            eventManager.printAddresses();
+        }
+
+
         eventManager.startService();
 
         Scanner sc = new Scanner(System.in);
@@ -497,7 +571,7 @@ public class EventManager extends Thread {
 
                 System.out.println("Press 3 to view topics");
                 System.out.println("Press 4 to Exit the loop");
-                System.out.print("Please select an option: ");
+                System.out.println("Please select an option: ");
 
                 userInput = sc.nextInt();
 
