@@ -11,6 +11,12 @@ public class Event implements Serializable {
 	private String title;
 	private String content;
 
+    public Event(Topic topic, String title, String content){
+        this.topic = topic;
+        this.title = title;
+        this.content = content;
+    }
+
 	public Event(int id, Topic topic, String title, String content){
 	    this.id = id;
 	    this.topic = topic;
@@ -49,5 +55,14 @@ public class Event implements Serializable {
 
 	public Topic getTopic() {
 		return this.topic;
+	}
+
+	public void printAllVariables(){
+		//System.out.println("\tEvent ID: " + this.id);
+		//System.out.println("\tEvent Title: " + this.title);
+		//System.out.println("\tEvent Topic: " + this.getTopicName());
+		//System.out.println("\tEvent Content: " + this.content);
+		System.out.println("EVENT-> Title: " + this.title + ", Topic Name: "
+				+ this.getTopicName() + ", Content: " + this.content);
 	}
 }
