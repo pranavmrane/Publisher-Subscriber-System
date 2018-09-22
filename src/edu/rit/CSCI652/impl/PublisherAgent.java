@@ -263,20 +263,29 @@ public class PublisherAgent extends Thread implements Publisher {
 
                         break;
                     case 2:
-                        System.out.println("Select Topic Id for The Event");
-                        pubUI.displayTopicWithNumbers();
-                        int topicId = sc.nextInt();
-                        // Moving Cursor to next line
-                        sc.nextLine();
-                        System.out.println("Enter Event Title");
-                        String eventTitle = sc.nextLine();
-                        System.out.println("Enter Content(String) for Event");
-                        String content = sc.nextLine();
-                        System.out.println("Generating new Event: "
-                                + "Title: " + eventTitle +
-                                ", Topic: " + topicList.get(topicId).getName() +
-                                ", Content: " + content);
-                        pubUI.publish(new Event(topicList.get(topicId), eventTitle, content));
+                        try {
+                            System.out.println("Select Topic Id for The Event");
+                            pubUI.displayTopicWithNumbers();
+                            int topicId = sc.nextInt();
+                            // Moving Cursor to next line
+                            sc.nextLine();
+                            System.out.println("Enter Event Title");
+                            String eventTitle = sc.nextLine();
+                            System.out.println("Enter Content(String) for Event");
+                            String content = sc.nextLine();
+                            System.out.println("Generating new Event: "
+                                    + "Title: " + eventTitle +
+                                    ", Topic: " +
+                                    topicList.get(topicId).getName() +
+                                    ", Content: " + content);
+                            pubUI.publish(new Event(topicList.get(topicId),
+                                    eventTitle, content));
+                        }
+                        catch (ArrayIndexOutOfBoundsException e){
+                            System.out.println("Start Again, Please Select " +
+                                    "Topic Id in Range");
+                        }
+
                         break;
                     case 3:
                         pubUI.ping();
