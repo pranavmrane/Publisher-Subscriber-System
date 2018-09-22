@@ -50,9 +50,11 @@ public class Topic implements Serializable {
     }
 
     public void printAllVariables(){
-		System.out.println("\tTopic ID: " + this.id);
-		System.out.println("\tName: " + this.name);
-		System.out.println("\tKeyWords for this Topic are: ");
-		this.printKeyWords();
+		//System.out.println("\tTopic ID: " + this.id);
+		// System.out.println("\tName: " + this.name);
+		// System.out.println("\tKeyWords for this Topic are: ");
+		System.out.println("TOPIC -> Name: " + this.name + ", Keywords : " +
+				this.keywords);
+		// this.printKeyWords();
 	}
 }

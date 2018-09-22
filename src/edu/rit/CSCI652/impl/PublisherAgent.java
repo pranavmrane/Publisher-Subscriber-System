@@ -45,10 +45,10 @@ public class PublisherAgent extends Thread implements Publisher {
     }
 
     public void printAddresses(){
-        System.out.println("\tListening Port: " + listeningPort);
-        System.out.println("\tThread Count: " + numberOfThreads);
-        System.out.println("\tSending Address: " + sendingAddress);
-        System.out.println("\tSending Port: " + sendingPort);
+        System.out.println("Listening Port: " + listeningPort);
+        System.out.println("Thread Count: " + numberOfThreads);
+        System.out.println("Sending Address: " + sendingAddress);
+        System.out.println("Sending Port: " + sendingPort);
     }
 
     public void printTopicVectors(Vector<Topic> list){
@@ -77,7 +77,8 @@ public class PublisherAgent extends Thread implements Publisher {
 
     public void startService() {
         try {
-            ss = new ServerSocket(listeningPort);
+            ss = new ServerSocket(listeningPort, 100, Inet4Address.getByName
+                    ("0.0.0.0"));
             PublisherAgent pub = new PublisherAgent(ss);
             pub.start();
 
@@ -181,7 +182,7 @@ public class PublisherAgent extends Thread implements Publisher {
         else {
             System.out.println("The Topics Available are:");
             for (int i=0; i<topicList.size(); i++){
-                System.out.println("\t" + i + ":" + topicList.get(i).getName());
+                System.out.println("" + i + ":" + topicList.get(i).getName());
             }
         }
     }
@@ -222,11 +223,11 @@ public class PublisherAgent extends Thread implements Publisher {
         sleep(2500);
         try{
             pubUI.ping();
-            pubUI.advertise(new Topic(Arrays.asList("India", "USA"),
-                    "World"));
-            sleep(1500);
-            pubUI.advertise(new Topic(Arrays.asList("India", "Europe"),
-                    "Continent"));
+            //pubUI.advertise(new Topic(Arrays.asList("India", "USA"),
+            //        "World"));
+            //sleep(1500);
+            //pubUI.advertise(new Topic(Arrays.asList("India", "Europe"),
+            //        "Continent"));
             sleep(1500);
             while(loopStatus){
                 // All other codes used to identify operations
@@ -244,9 +245,10 @@ public class PublisherAgent extends Thread implements Publisher {
                     case 1:
                         // Moving Cursor to next line
                         sc.nextLine();
-                        System.out.println("Enter topic name");
+                        System.out.println("Enter topic name: ");
                         String name = sc.nextLine();
-                        System.out.println("Enter keywords, Separate By Commas");
+                        System.out.println("Enter keywords, Separate By " +
+                                "Commas: ");
                         String keywords = sc.nextLine();
                         String[] keywordsArray = keywords.split(",");
                         for(int i = 0; i<keywordsArray.length; i++){
@@ -254,8 +256,8 @@ public class PublisherAgent extends Thread implements Publisher {
                         }
                         List<String> keywordsList =
                                 new Vector<String>(Arrays.asList(keywordsArray));
-                        System.out.println("Generating new topic" + "\n\tName: " +name+
-                                "\n\tKeywords: " + keywords);
+                        System.out.println("Generating new topic -> " + "Name: "
+                                + name + ", Keywords: " + keywords);
                          pubUI.advertise(new Topic(keywordsList,name));
 
 
@@ -271,9 +273,9 @@ public class PublisherAgent extends Thread implements Publisher {
                         System.out.println("Enter Content(String) for Event");
                         String content = sc.nextLine();
                         System.out.println("Generating new Event: "
-                                + "\n\tTitle: " + eventTitle +
-                                "\n\tTopic: " + topicList.get(topicId).getName() +
-                                "\n\tContent: " + content);
+                                + "Title: " + eventTitle +
+                                ", Topic: " + topicList.get(topicId).getName() +
+                                ", Content: " + content);
                         pubUI.publish(new Event(topicList.get(topicId), eventTitle, content));
                         break;
                     case 3:
@@ -286,7 +288,7 @@ public class PublisherAgent extends Thread implements Publisher {
                         loopStatus = false;
                         break;
                     default:
-                        System.out.println("Please enter a correct value");
+                        System.out.println("Please enter a correct value.");
                         break;
                 }// End of Switch Case
             }// End of While Loop

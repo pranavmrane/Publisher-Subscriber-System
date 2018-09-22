@@ -58,9 +58,11 @@ public class Event implements Serializable {
 	}
 
 	public void printAllVariables(){
-		System.out.println("\tEvent ID: " + this.id);
-		System.out.println("\tEvent Title: " + this.title);
-		System.out.println("\tEvent Topic: " + this.getTopicName());
-		System.out.println("\tEvent Content: " + this.content);
+		//System.out.println("\tEvent ID: " + this.id);
+		//System.out.println("\tEvent Title: " + this.title);
+		//System.out.println("\tEvent Topic: " + this.getTopicName());
+		//System.out.println("\tEvent Content: " + this.content);
+		System.out.println("EVENT-> Title: " + this.title + ", Topic Name: "
+				+ this.getTopicName() + ", Content: " + this.content);
 	}
 }

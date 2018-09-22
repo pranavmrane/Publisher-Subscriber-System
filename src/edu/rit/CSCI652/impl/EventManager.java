@@ -8,10 +8,7 @@ import edu.rit.CSCI652.demo.Topic;
 
 import java.io.*;
 import java.lang.reflect.Array;
-import java.net.ConnectException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.StandardSocketOptions;
+import java.net.*;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -83,46 +80,50 @@ public class EventManager extends Thread {
     }
 
     public void printAddresses(){
-        System.out.println("\tListening Port: " + listeningPort);
-        System.out.println("\tThread Count: " + numberOfThreads);
-        System.out.println("\tSending Address: " + listeningAddress);
+        System.out.println("Listening Port: " + listeningPort);
+        System.out.println("Thread Count: " + numberOfThreads);
+        System.out.println("Sending Address: " + listeningAddress);
     }
 
     public void printTopicsHashmap(){
-        for(String topicName: topicsInfo.keySet()){
-            System.out.println("\tTopic Name: " + topicName);
+        System.out.println(topicsInfo);
+        /* for(String topicName: topicsInfo.keySet()){
+            System.out.println("Topic Name: " + topicName);
             Vector<String> subscribersForTopic = topicsInfo.get(topicName);
             if(subscribersForTopic.size()!=0){
                 for(String subscriberDetails: subscribersForTopic){
                     String infoArray[] = subscriberDetails.split(":");
-                    System.out.println("\t\tSubscriber Address: " +
-                            infoArray[0]);
-                    System.out.println("\t\tSubscriber Port: " +
+                    System.out.println("Subscriber Address: " +
+                            infoArray[0] + ", Subscriber Port: " +
                             infoArray[1]);
+                    //System.out.println("\t\tSubscriber Port: " +
+                    //         infoArray[1]);
                 }
             }
-        }
+        } */
     }
 
     public void printSubscribersHashmap(){
         for(String subscriberName: subscribersInfo.keySet()){
             String infoArray[] = subscriberName.split(":");
-            System.out.println("\tSubscriber Address: " +
-                    infoArray[0]);
-            System.out.println("\tSubscriber Port: " +
+            System.out.println("Subscriber Address: " +
+                    infoArray[0] + ", Subscriber Port: " + infoArray[1] + ", " +
+                    "Topics: " + subscribersInfo.get(subscriberName));
+            /*System.out.println("\tSubscriber Port: " +
                     infoArray[1]);
             Vector<String> topicsForSubscribers = subscribersInfo.get(subscriberName);
             if(topicsForSubscribers.size()!=0){
                 for(String topicName: topicsForSubscribers){
                     System.out.println("\t\tTopic Name:" + topicName);
                 }
-            }
+            }*/
         }
     }
 
     private void startService() {
         try {
-            ss = new ServerSocket(listeningPort);
+            ss = new ServerSocket(listeningPort, 100, Inet4Address.getByName
+                    (listeningAddress));
             for (int i = 0; i < numberOfThreads; i++) {
                 EventManager em = new EventManager(ss);
                 em.start();
@@ -220,15 +221,16 @@ public class EventManager extends Thread {
      */
     private void notifySubscribers(Event event) {
         // Find index for event
+        System.out.println("Received new event: " + event);
         String topicName = event.getTopicName();
         eventIndexLock.lock();
         int index = eventIndex.get(topicName);
         event.setId(index++);
         eventIndex.put(topicName, index);
         eventIndexLock.unlock();
-        System.out.println("notifySubscribers Print:");
-        System.out.println(index);
-        System.out.println(eventIndex);
+        // System.out.println("notifySubscribers Print:");
+        // System.out.println(index);
+        // System.out.println(eventIndex);
         String destination;
         int port;
         Socket sendSocket = null;
@@ -251,7 +253,7 @@ public class EventManager extends Thread {
                     sendSocket = new Socket(destination, port);
                     ObjectOutputStream out = new ObjectOutputStream
                             (sendSocket.getOutputStream());
-                    // 3 -> Advertising new topic
+                    // 3 -> Advertising new event
                     out.writeInt(3);
                     out.writeObject(event);
                 }
@@ -269,6 +271,7 @@ public class EventManager extends Thread {
                     pendingEvents.put(s, tmpPendingEvents);
                 }
                 else{
+                    System.out.println("Subscriber " + s + " is offline.");
                     ConcurrentHashMap<Event, LocalDateTime> dataForNewSubs = new ConcurrentHashMap<Event, LocalDateTime>();
                     currentTime = LocalDateTime.now();
                     dataForNewSubs.put(event, currentTime);
@@ -492,8 +495,11 @@ public class EventManager extends Thread {
                     out.close();
                 } catch (IOException e) {
                     // TODO: Subscriber is offline. Handle it!
-                    e.printStackTrace();
+                    // e.printStackTrace();
+                    System.out.println("Subscriber " + s + " is offline.");
                     offlineSubscribers.add(s);
+                    pendingEvents.put(s, new ConcurrentHashMap<Event,
+                            LocalDateTime>());
                 }
             }
         }
@@ -639,7 +645,7 @@ public class EventManager extends Thread {
                             ArrayList<String> subscriberNames =
                                     new ArrayList<String>();
                             for(String subscriberName: subscribersInfo.keySet()){
-                                System.out.println("\t" + index + ":"
+                                System.out.println("" + index + ":"
                                         + subscriberName);
                                 subscriberNames.add(subscriberName);
                             }

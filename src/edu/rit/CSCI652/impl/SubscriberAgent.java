@@ -43,10 +43,10 @@ public class SubscriberAgent extends Thread implements Subscriber {
     }
 
     public void printAddresses(){
-        System.out.println("\tListening Port: " + listeningPort);
-        System.out.println("\tThread Count: " + numberOfThreads);
-        System.out.println("\tSending Address: " + sendingAddress);
-        System.out.println("\tSending Port: " + sendingPort);
+        System.out.println("Listening Port: " + listeningPort);
+        System.out.println("Thread Count: " + numberOfThreads);
+        System.out.println("Sending Address: " + sendingAddress);
+        System.out.println("Sending Port: " + sendingPort);
     }
 
     public void printTopicVectors(Vector<Topic> list){
@@ -58,12 +58,11 @@ public class SubscriberAgent extends Thread implements Subscriber {
             }
         }
         else {
-            System.out.println("\tNo Topic Available");
+            System.out.println("No Topic Available.");
         }
     }
 
     public void printEventVectors(Vector<Event> list){
-
         if(list!=null){
             for(Event topic: list){
                 topic.printAllVariables();
@@ -71,13 +70,14 @@ public class SubscriberAgent extends Thread implements Subscriber {
             }
         }
         else {
-            System.out.println("No Pending Events Available at this moment");
+            System.out.println("No Pending Events Available at this moment.");
         }
     }
 
     public void startService() {
         try {
-            ss = new ServerSocket(listeningPort);
+            ss = new ServerSocket(listeningPort, 100, Inet4Address.getByName
+                    ("0.0.0.0"));
             SubscriberAgent pub = new SubscriberAgent(ss);
             pub.start();
 
@@ -149,7 +149,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
         Socket clientSocket = null;
         try {
             System.out.println("Subscribing to topic: " + topic.getName());
-            clientSocket = new Socket("localhost", 4444);
+            clientSocket = new Socket(sendingAddress, 4444);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket
                     .getOutputStream());
             // 2 -> subscribe to topic
@@ -186,7 +186,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
         Socket clientSocket = null;
         try {
             System.out.println("Unsubscribing from topic: " + topic.getName());
-            clientSocket = new Socket("localhost", 4444);
+            clientSocket = new Socket(sendingAddress, 4444);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket
                     .getOutputStream());
             // 6 -> unsubscribe a topic
@@ -298,7 +298,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
         // System.out.println("printList");
         int i = 0;
         for(String content : contentList) {
-            System.out.println("\t" + i + ":" + content);
+            System.out.println("" + i + ":" + content);
             i++;
         }
     }
@@ -311,7 +311,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
         else {
             System.out.println("The Topics Available are:");
             for (int i=0; i<topicList.size(); i++){
-                System.out.println("\t" + i + ":" + topicList.get(i).getName());
+                System.out.println("" + i + ":" + topicList.get(i).getName());
             }
         }
     }
