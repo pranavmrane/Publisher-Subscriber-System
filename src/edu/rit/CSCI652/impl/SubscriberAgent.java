@@ -174,7 +174,6 @@ public class SubscriberAgent extends Thread implements Subscriber {
         for(Topic consideration: topicList){
             if (consideration.checkIfKeyWordExists(keyword)){
                 this.subscribe(consideration);
-                break;
             }
         }
     }
