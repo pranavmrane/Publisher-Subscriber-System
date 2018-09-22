@@ -171,10 +171,15 @@ public class SubscriberAgent extends Thread implements Subscriber {
     * This function uses the same numeric code as subscribe i.e. 2
     * */
     public void subscribe(String keyword) {
+        boolean foundStatus = false;
         for(Topic consideration: topicList){
             if (consideration.checkIfKeyWordExists(keyword)){
+                foundStatus = true;
                 this.subscribe(consideration);
             }
+        }
+        if(!foundStatus){
+            System.out.println("Value entered NOT found, stick to original list");
         }
     }
 
@@ -225,7 +230,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
         Vector<String> subscribedTopicsList = null;
         Socket clientSocket = null;
         try {
-            System.out.println("Getting Subscribed Topics ");
+            System.out.println("Getting Subscribed Topics...");
             clientSocket = new Socket(sendingAddress, sendingPort);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket
                     .getOutputStream());
@@ -377,16 +382,31 @@ public class SubscriberAgent extends Thread implements Subscriber {
                 switch (userInput) {
                     case 1:
                         System.out.println("Select Topic Id from list below:");
-                        subUI.displayTopicWithNumbers();
-                        int topicId0 = sc.nextInt();
-                        subUI.subscribe(topicList.get(topicId0));
+                        if(topicList.size()>0){
+                            subUI.displayTopicWithNumbers();
+                            int topicId0 = sc.nextInt();
+                            try {
+                                subUI.subscribe(topicList.get(topicId0));
+                            }
+                            catch (ArrayIndexOutOfBoundsException e){
+                                System.out.println("Please enter a value in range");
+                            }
+                        }
+                        else {
+                            System.out.println("No Topics Can be Selected Now");
+                        }
                         break;
                     case 2:
                         System.out.println("Write a keyword from list displayed " +
                                 "below");
-                        subUI.displayKeyWordsForTopics();
-                        String keyWordValue = sc.next();
-                        subUI.subscribe(keyWordValue);
+                        if(topicList.size()>0){
+                            subUI.displayKeyWordsForTopics();
+                            String keyWordValue = sc.next();
+                            subUI.subscribe(keyWordValue);
+                        }
+                        else {
+                            System.out.println("No KeyWords Can be Selected Now");
+                        }
                         break;
                     case 3:
                         subUI.listSubscribedTopics();
