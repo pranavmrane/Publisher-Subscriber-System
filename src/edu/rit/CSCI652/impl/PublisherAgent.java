@@ -224,9 +224,10 @@ public class PublisherAgent extends Thread implements Publisher {
             pubUI.ping();
             pubUI.advertise(new Topic(Arrays.asList("India", "USA"),
                     "World"));
-            sleep(900);
-            pubUI.advertise(new Topic(Arrays.asList("Asia", "Europe"),
+            sleep(1500);
+            pubUI.advertise(new Topic(Arrays.asList("India", "Europe"),
                     "Continent"));
+            sleep(1500);
             while(loopStatus){
                 // All other codes used to identify operations
 
@@ -241,13 +242,16 @@ public class PublisherAgent extends Thread implements Publisher {
 
                 switch (userInput){
                     case 1:
+                        // Moving Cursor to next line
+                        sc.nextLine();
                         System.out.println("Enter topic name");
-                        String name = sc.next();
-//                        System.out.println("Enter Topic Id");
-//                        int tid = sc.nextInt();
+                        String name = sc.nextLine();
                         System.out.println("Enter keywords, Separate By Commas");
-                        String keywords = sc.next();
+                        String keywords = sc.nextLine();
                         String[] keywordsArray = keywords.split(",");
+                        for(int i = 0; i<keywordsArray.length; i++){
+                            keywordsArray[i] = keywordsArray[i].trim();
+                        }
                         List<String> keywordsList =
                                 new Vector<String>(Arrays.asList(keywordsArray));
                         System.out.println("Generating new topic" + "\n\tName: " +name+
@@ -260,12 +264,12 @@ public class PublisherAgent extends Thread implements Publisher {
                         System.out.println("Select Topic Id for The Event");
                         pubUI.displayTopicWithNumbers();
                         int topicId = sc.nextInt();
+                        // Moving Cursor to next line
+                        sc.nextLine();
                         System.out.println("Enter Event Title");
-                        String eventTitle = sc.next();
-//                        System.out.println("Enter Event Id");
-//                        int eid = sc.nextInt();
+                        String eventTitle = sc.nextLine();
                         System.out.println("Enter Content(String) for Event");
-                        String content = sc.next();
+                        String content = sc.nextLine();
                         System.out.println("Generating new Event: "
                                 + "\n\tTitle: " + eventTitle +
                                 "\n\tTopic: " + topicList.get(topicId).getName() +
