@@ -534,6 +534,14 @@ public class EventManager extends Thread {
 
         System.out.println("Current subscribers list: ");
         printSubscribersHashmap();
+
+        try{
+            sleep(2000);
+        }
+        catch (InterruptedException e){
+            e.printStackTrace();
+        }
+
         System.out.println("Current subscribers per topic: ");
         printTopicsHashmap();
 
@@ -570,9 +578,13 @@ public class EventManager extends Thread {
 
     /*Displays all the topics ever registered with event manager*/
     private void displayTopicWithNumbers (){
-        if(topicList.size() == 0) System.out.println("No Topics Present");
-        for (int i=0; i<topicList.size(); i++){
-            System.out.println(i + ":" + topicList.get(i).getName());
+        if(topicList.size() == 0) {
+            System.out.println("No Topics Present");
+        }
+        else{
+            for (int i=0; i<topicList.size(); i++){
+                System.out.println(i + ":" + topicList.get(i).getName());
+            }
         }
     }
 
@@ -620,16 +632,36 @@ public class EventManager extends Thread {
 
                 switch (userInput) {
                     case 1:
-                        System.out.println("Type Subscriber to be Removed, " +
-                                "No Spaces Allowed");
-                        String subscriberName = sc.next();
-                        eventManager.removeSubscriber(subscriberName);
+                        if(subscribersInfo.size()>0){
+                            System.out.println("Select Index of Subscriber to " +
+                                    "be Removed, No Spaces Allowed");
+                            int index = 0;
+                            ArrayList<String> subscriberNames =
+                                    new ArrayList<String>();
+                            for(String subscriberName: subscribersInfo.keySet()){
+                                System.out.println("\t" + index + ":"
+                                        + subscriberName);
+                                subscriberNames.add(subscriberName);
+                            }
+                            int subscriberIndex = sc.nextInt();
+                            eventManager.removeSubscriber(subscriberNames.
+                                    get(subscriberIndex));
+                        }
+                        else {
+                            System.out.println("No Subscribers Present");
+                        }
+
                         break;
                     case 2:
                         System.out.println("Select Topic Id for List");
-                        eventManager.displayTopicWithNumbers();
-                        int topicId = sc.nextInt();
-                        eventManager.showSubscribers(topicList.get(topicId));
+                        if(topicList.size() == 0) {
+                            System.out.println("No Topics Present");
+                        }
+                        else {
+                            eventManager.displayTopicWithNumbers();
+                            int topicId = sc.nextInt();
+                            eventManager.showSubscribers(topicList.get(topicId));
+                        }
                         break;
                     case 3:
                         eventManager.displayTopicWithNumbers();
