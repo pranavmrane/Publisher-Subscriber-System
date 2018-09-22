@@ -183,6 +183,12 @@ public class EventManager extends Thread {
                         // Presently no action taken with position of subscriber
                         subscribersInfo.put(subscriberId,
                                 new Vector<String>());
+                        for(String topicName: topicsInfo.keySet()){
+                            Vector<String> subscriberNamesForTopic =
+                                    topicsInfo.get(topicName);
+                            subscriberNamesForTopic.remove(subscriberId);
+                            topicsInfo.put(topicName, subscriberNamesForTopic);
+                        }
                     }
                     // 6 -> unsubscribe a specific topic
                     else if (code == 6) {
@@ -221,7 +227,7 @@ public class EventManager extends Thread {
      */
     private void notifySubscribers(Event event) {
         // Find index for event
-        System.out.println("Received new event: " + event);
+        System.out.println("Received new event: " + event.getTitle());
         String topicName = event.getTopicName();
         eventIndexLock.lock();
         int index = eventIndex.get(topicName);
@@ -417,7 +423,7 @@ public class EventManager extends Thread {
 //        System.out.println("<->: " + topicList);
 //        System.out.println("<-1->: " + topicName);
 
-        System.out.println("unsubscribeTopic");
+        // System.out.println("unsubscribeTopic");
         if (!subscribersInfo.containsKey(subscriberName)) {
             System.out.println("Subscriber Not Present");
             return;
@@ -432,6 +438,11 @@ public class EventManager extends Thread {
         Vector<String> subscriptions = subscribersInfo.get(subscriberName);
         subscriptions.remove(topicName.getName());
         subscribersInfo.put(subscriberName, subscriptions);
+
+        Vector<String> subscriberNames = topicsInfo.get(topicName.getName());
+        subscriberNames.remove(subscriberName);
+        topicsInfo.put(topicName.getName(), subscriberNames);
+
     }
 
     /*
@@ -650,8 +661,13 @@ public class EventManager extends Thread {
                                 subscriberNames.add(subscriberName);
                             }
                             int subscriberIndex = sc.nextInt();
-                            eventManager.removeSubscriber(subscriberNames.
-                                    get(subscriberIndex));
+                            try {
+                                eventManager.removeSubscriber(subscriberNames.
+                                        get(subscriberIndex));
+                            }
+                            catch (ArrayIndexOutOfBoundsException e){
+                                System.out.println("Please enter a value in range");
+                            }
                         }
                         else {
                             System.out.println("No Subscribers Present");
@@ -666,7 +682,12 @@ public class EventManager extends Thread {
                         else {
                             eventManager.displayTopicWithNumbers();
                             int topicId = sc.nextInt();
-                            eventManager.showSubscribers(topicList.get(topicId));
+                            try {
+                                eventManager.showSubscribers(topicList.get(topicId));
+                            }
+                            catch (ArrayIndexOutOfBoundsException e){
+                                System.out.println("Please enter a value in range");
+                            }
                         }
                         break;
                     case 3:
