@@ -27,7 +27,7 @@ public class EventManager extends Thread {
     private int listeningPort = 0;
     private String listeningAddress = "";
 
-    // {topic1={subscriber1:position, subscriber2: position}, topic2 = {}}
+    // {topic1={subscriber1, subscriber2}, topic2 = {}}
     // subscriber1 is IP:port
     static private ConcurrentHashMap<String, Vector<String>> topicsInfo = new
             ConcurrentHashMap<>();
@@ -43,6 +43,7 @@ public class EventManager extends Thread {
     static private ConcurrentHashMap<String, Vector<Event>> topicQueue = new
             ConcurrentHashMap<>();
 
+    // {SubscriberName = {EventName, Time}}
     static public ConcurrentHashMap<String, ConcurrentHashMap<Event,
             LocalDateTime>> pendingEvents = new ConcurrentHashMap<>();
 
@@ -179,8 +180,6 @@ public class EventManager extends Thread {
                     else if (code == 5) {
                         // System.out.println("code" + 5);
                         String subscriberId = in.readUTF();
-                        // TODO: Decipher future impact of removal on topicInfo
-                        // Presently no action taken with position of subscriber
                         subscribersInfo.put(subscriberId,
                                 new Vector<String>());
                         for(String topicName: topicsInfo.keySet()){
@@ -196,8 +195,6 @@ public class EventManager extends Thread {
                         String subscriberId = in.readUTF();
                         // String inet = s.getInetAddress().getHostAddress();
                         Topic topic = (Topic) in.readObject();
-                        // TODO: Decipher future impact of removal on topicInfo
-                        // Presently no action taken with position of subscriber
                         this.unsubscribeTopic(subscriberId, topic);
                     }
                     // 999 -> Publisher came online or New Publisher
@@ -223,7 +220,7 @@ public class EventManager extends Thread {
 
     /*
      * notify all subscribers of new event
-     * Questions: What to do with topic queue?
+     * Offline Subscribers will also be dealt here
      */
     private void notifySubscribers(Event event) {
         // Find index for event
@@ -246,6 +243,7 @@ public class EventManager extends Thread {
                 new ConcurrentHashMap<Event, LocalDateTime>();
         for (String s : topicsInfo.get(topicName)) {
             try {
+                // Subscriber is offline and we have previously discovered it in its offline state 
                 if (offlineSubscribers.contains(s)) {
                     LocalDateTime currentTime = null;
                     tmpPendingEvents = pendingEvents.get(s);
@@ -254,6 +252,7 @@ public class EventManager extends Thread {
                     pendingEvents.put(s, tmpPendingEvents);
                 }
                 else {
+                    // Subscriber online, so transmit
                     destination = s.split(":")[0];
                     port = Integer.parseInt(s.split(":")[1]);
                     sendSocket = new Socket(destination, port);
@@ -269,7 +268,7 @@ public class EventManager extends Thread {
                 // e.printStackTrace();
                 offlineSubscribers.add(s);
                 // tmpPendingEvents = new ConcurrentHashMap<Event, LocalDateTime>();
-
+                // Subscriber offline and we have previously discovered the offline subscriber
                 if(pendingEvents.contains(s)){
                     tmpPendingEvents = pendingEvents.get(s);
                     currentTime = LocalDateTime.now();
@@ -277,6 +276,7 @@ public class EventManager extends Thread {
                     pendingEvents.put(s, tmpPendingEvents);
                 }
                 else{
+                    // Dealing with newly discovered offline subscriber
                     System.out.println("Subscriber " + s + " is offline.");
                     ConcurrentHashMap<Event, LocalDateTime> dataForNewSubs = new ConcurrentHashMap<Event, LocalDateTime>();
                     currentTime = LocalDateTime.now();
@@ -410,10 +410,12 @@ public class EventManager extends Thread {
             return;
         }
 
+        // Remove Information from SubscriberInfo
         Vector<String> subscriptions = subscribersInfo.get(subscriberName);
         subscriptions.remove(topicName.getName());
         subscribersInfo.put(subscriberName, subscriptions);
 
+        // Remove Information from topicsInfo
         Vector<String> subscriberNames = topicsInfo.get(topicName.getName());
         subscriberNames.remove(subscriberName);
         topicsInfo.put(topicName.getName(), subscriberNames);
@@ -444,7 +446,7 @@ public class EventManager extends Thread {
             Socket sendSocket;
             String destination;
             int port;
-            // The code below works as expected
+            // Send Information to online Publishers
             for (String publisher : publishersInfo) {
                 try {
                     destination = publisher.split(":")[0];
@@ -462,10 +464,7 @@ public class EventManager extends Thread {
                 }
             }
 
-            // There is a definite issue in the code below
-            // Information doesn't get transmitted
-            // The most common solution online is adding flush
-
+            // Send Information to online Subscribers
             for (String subscriber : subscribersInfo.keySet()) {
                 if (!offlineSubscribers.contains(subscriber)) {
                     try {
@@ -530,9 +529,6 @@ public class EventManager extends Thread {
 
     /*
      * remove subscriber from the list
-     * The original function dMap.Entry<String, Integer> nameEntryefinition did not contain parameter:droppedSubscriber
-     * In the original function{removeSubscriber()}, It wasn't clear which
-     * subscriber is to be removed
      */
     private void removeSubscriber(String droppedSubscriber) {
         // System.out.println("removeSubscriber");
@@ -696,6 +692,7 @@ class GarbageCollector extends Thread{
         LocalDateTime timeRightNow = null;
         try {
             while (true){
+                // Garbage Collector is coming back
                 sleep(60*1000);
                 System.out.println("Garbage Collecter Active");
                 for(String subscriberName : EventManager.pendingEvents.keySet()){
