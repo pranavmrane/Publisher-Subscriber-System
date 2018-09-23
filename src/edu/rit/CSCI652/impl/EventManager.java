@@ -52,9 +52,13 @@ public class EventManager extends Thread {
     // Obtain eventIndexLock before using this.
     static private ConcurrentHashMap<String, Integer> eventIndex = new
             ConcurrentHashMap<>();
+    private final Lock eventIndexLock = new ReentrantLock();
 
     // TTL for event expiry.
     static private int ttl = 2;
+
+    // Connection timeout for offline Publisher / Subscriber
+    static private int timeout = 1000;
 
     public EventManager() {
 
@@ -146,6 +150,8 @@ public class EventManager extends Thread {
                         subscribersInfo.put(subscriberId,
                                 new Vector<String>());
                         for(String topicName: topicsInfo.keySet()){
+                            System.out.println("Unsubscribing " +
+                                    subscriberId + " from " + topicName);
                             Vector<String> subscriberNamesForTopic =
                                     topicsInfo.get(topicName);
                             subscriberNamesForTopic.remove(subscriberId);
@@ -185,7 +191,7 @@ public class EventManager extends Thread {
      * notify all subscribers of new event
      * Offline Subscribers will also be dealt here
      */
-    private void notifySubscribers(Event event) {
+    synchronized private void notifySubscribers(Event event) {
         // Find index for event
         System.out.println("Received new event: " + event.getTitle());
         String topicName = event.getTopicName();
@@ -211,7 +217,9 @@ public class EventManager extends Thread {
                     // Subscriber should be online, try notifying.
                     destination = s.split(":")[0];
                     port = Integer.parseInt(s.split(":")[1]);
-                    sendSocket = new Socket(destination, port);
+                    sendSocket = new Socket();
+                    sendSocket.connect(new InetSocketAddress(destination,
+                            port), timeout);
                     ObjectOutputStream out = new ObjectOutputStream
                             (sendSocket.getOutputStream());
                     // 3 -> Advertising new event
@@ -221,22 +229,12 @@ public class EventManager extends Thread {
             } catch (IOException e) {
                 // Subscriber is offline. Handle it!
                 LocalDateTime currentTime  = null;
+                System.out.println("Subscriber " + s + " is offline.");
                 offlineSubscribers.add(s);
-                // Subscriber is already known to be offline.
-                if(pendingEvents.contains(s)){
-                    tmpPendingEvents = pendingEvents.get(s);
-                    currentTime = LocalDateTime.now();
-                    tmpPendingEvents.put(event, currentTime);
-                    pendingEvents.put(s, tmpPendingEvents);
-                }
-                else{
-                    // Dealing with newly discovered offline subscriber
-                    System.out.println("Subscriber " + s + " is offline.");
-                    ConcurrentHashMap<Event, LocalDateTime> dataForNewSubs = new ConcurrentHashMap<Event, LocalDateTime>();
-                    currentTime = LocalDateTime.now();
-                    dataForNewSubs.put(event, currentTime);
-                    pendingEvents.put(s, dataForNewSubs);
-                }
+                tmpPendingEvents = pendingEvents.get(s);
+                currentTime = LocalDateTime.now();
+                tmpPendingEvents.put(event, currentTime);
+                pendingEvents.put(s, tmpPendingEvents);
 
             }
         }
@@ -253,7 +251,9 @@ public class EventManager extends Thread {
         String destination = publisherId.split(":")[0];
         int port = Integer.parseInt(publisherId.split(":")[1]);
         try {
-            Socket sendSocket = new Socket(destination, port);
+            Socket sendSocket = new Socket();
+            sendSocket.connect(new InetSocketAddress(destination,
+                    port), timeout);
             ObjectOutputStream out = new ObjectOutputStream(sendSocket
                     .getOutputStream());
             // 999 -> Sending Publisher list of topics
@@ -276,7 +276,9 @@ public class EventManager extends Thread {
         String destination = subscriberId.split(":")[0];
         int port = Integer.parseInt(subscriberId.split(":")[1]);
         try {
-            Socket sendSocket = new Socket(destination, port);
+            Socket sendSocket = new Socket();
+            sendSocket.connect(new InetSocketAddress(destination,
+                    port), timeout);
             ObjectOutputStream out = new ObjectOutputStream(sendSocket
                     .getOutputStream());
             // Sending subscriber list of topics and any pending events
@@ -297,8 +299,8 @@ public class EventManager extends Thread {
                 }
                 out.writeObject(eventList);
 
-                // Remove Subscriber for Pending List
-                pendingEvents.remove(subscriberId);
+                // Remove Subscriber from offlineSubscribers
+                pendingEvents.put(subscriberId, new ConcurrentHashMap<>());
                 offlineSubscribers.remove(subscriberId);
             }
             else {
@@ -339,6 +341,7 @@ public class EventManager extends Thread {
         else {
             System.out.println("Adding new Subscriber: " + subscriberId);
             subscribersInfo.put(subscriberId, new Vector<String>());
+            pendingEvents.put(subscriberId, new ConcurrentHashMap<>());
         }
     }
 
@@ -354,7 +357,8 @@ public class EventManager extends Thread {
             System.out.println("Topic Not Present");
             return;
         }
-
+        System.out.println("Unsubscribing " + subscriberName + " from " +
+                topicName);
         // Remove Information from SubscriberInfo
         Vector<String> subscriptions = subscribersInfo.get(subscriberName);
         subscriptions.remove(topicName.getName());
@@ -369,7 +373,7 @@ public class EventManager extends Thread {
     /*
      * Add new topic when received advertisement of new topic
      */
-    private void addTopic(Topic topic) {
+    synchronized private void addTopic(Topic topic) {
         // Check if topic already exists
         if (topicsInfo.containsKey(topic.getName())) {
             System.out.println("Topic already exists");
@@ -396,7 +400,9 @@ public class EventManager extends Thread {
                 try {
                     destination = publisher.split(":")[0];
                     port = Integer.parseInt(publisher.split(":")[1]);
-                    sendSocket = new Socket(destination, port);
+                    sendSocket = new Socket();
+                    sendSocket.connect(new InetSocketAddress(destination,
+                            port), timeout);
                     ObjectOutputStream out = new ObjectOutputStream
                             (sendSocket.getOutputStream());
 
@@ -417,7 +423,9 @@ public class EventManager extends Thread {
                     try {
                         destination = subscriber.split(":")[0];
                         port = Integer.parseInt(subscriber.split(":")[1]);
-                        sendSocket = new Socket(destination, port);
+                        sendSocket = new Socket();
+                        sendSocket.connect(new InetSocketAddress(destination,
+                                port), timeout);
                         ObjectOutputStream out = new ObjectOutputStream
                                 (sendSocket.getOutputStream());
 
@@ -431,10 +439,6 @@ public class EventManager extends Thread {
                         System.out.println("Subscriber " + subscriber + " is " +
                                 "offline.");
                         offlineSubscribers.add(subscriber);
-                        if(!pendingEvents.contains(subscriber)){
-                            ConcurrentHashMap<Event, LocalDateTime> dataForNewSubs = new ConcurrentHashMap<Event, LocalDateTime>();
-                            pendingEvents.put(subscriber, dataForNewSubs);
-                        }
                     }
                 }
             }
@@ -486,6 +490,7 @@ public class EventManager extends Thread {
                     topicsInfo.get(topicName);
             subscriberNamesForTopic.remove(droppedSubscriber);
             topicsInfo.put(topicName, subscriberNamesForTopic);
+            pendingEvents.put(droppedSubscriber, new ConcurrentHashMap<>());
         }
         System.out.println(droppedSubscriber + " is removed");
     }
@@ -603,7 +608,7 @@ public class EventManager extends Thread {
                             int topicId = sc.nextInt();
                             try {
                                 System.out.println("Subscribers for the topic " +
-                                    "are:");
+                                        "are:");
                                 eventManager.showSubscribers(topicList.get(topicId));
                             }
                             catch (ArrayIndexOutOfBoundsException e){
@@ -660,14 +665,15 @@ class GarbageCollector extends Thread{
         try {
             while (true){
                 // Garbage Collector runs every minute.
-                sleep(60*1000);
-                System.out.println("Garbage Collector Active");
+                sleep(5*60*1000);
+                timeRightNow = LocalDateTime.now();
+                System.out.println("Garbage Collector Active at " + timeRightNow);
+
                 for(String subscriberName : EventManager.pendingEvents.keySet()){
                     ConcurrentHashMap<Event, LocalDateTime> eventHistory =
                             EventManager.pendingEvents.get(subscriberName);
                     for(Event historicalEvent: eventHistory.keySet()){
-                        timeRightNow = LocalDateTime.now();
-                        // Remove an event that is more than 5 minutes old
+                        // Remove an event that is more than ttl minutes old
                         if(Duration.between(eventHistory.get(historicalEvent),
                                 timeRightNow).toMillis()>(ttl*60*1000)){
                             System.out.println("Removed: " + historicalEvent.getTitle());
@@ -676,6 +682,7 @@ class GarbageCollector extends Thread{
                     }
                     EventManager.pendingEvents.put(subscriberName, eventHistory);
                 }
+                System.out.println("Garbage Collector Sleeping");
             }
         }
         catch (InterruptedException e){

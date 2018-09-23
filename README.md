@@ -23,8 +23,8 @@ With a working installation of docker. Create a new network so that we can get c
 4) For EventManager run:
 docker run --rm --net mynet123 -i --ip 172.18.0.2 -v $PWD:/app -w /app demo/pubsub java -cp "/app/src" edu.rit.CSCI652.impl.EventManager -port 4444 -threads 4 -eventManagerIP 0.0.0.0 
 5) For each PublisherAgent run:
-docker run --rm --net mynet123 -i -v $PWD:/app -w /app demo/pubsub java -cp "/app/bin" edu.rit.CSCI652.impl.PublisherAgent -port 10000 -threads 2 -eventManagerIP 172.18.0.2 -eventManagerPort 4444
+docker run --rm --net mynet123 -i -v $PWD:/app -w /app demo/pubsub java -cp "/app/src" edu.rit.CSCI652.impl.PublisherAgent -port 10000 -threads 2 -eventManagerIP 172.18.0.2 -eventManagerPort 4444
 6) For each SubscriberAgent run:
-docker run --rm --net mynet123 -i -v $PWD:/app -w /app demo/pubsub java -cp "/app/bin" edu.rit.CSCI652.impl.SusbcriberAgent -port 11000 -threads 2 -eventManagerIP 172.18.0.2 -eventManagerPort 4444
+docker run --rm --net mynet123 -i -v $PWD:/app -w /app demo/pubsub java -cp "/app/src" edu.rit.CSCI652.impl.SusbcriberAgent -port 11000 -threads 2 -eventManagerIP 172.18.0.2 -eventManagerPort 4444
 ```
 
