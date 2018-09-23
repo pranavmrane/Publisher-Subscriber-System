@@ -430,8 +430,8 @@ public class EventManager extends Thread {
                         // Subscriber is offline.
                         System.out.println("Subscriber " + subscriber + " is " +
                                 "offline.");
+                        offlineSubscribers.add(subscriber);
                         if(!pendingEvents.contains(subscriber)){
-                            offlineSubscribers.add(subscriber);
                             ConcurrentHashMap<Event, LocalDateTime> dataForNewSubs = new ConcurrentHashMap<Event, LocalDateTime>();
                             pendingEvents.put(subscriber, dataForNewSubs);
                         }
