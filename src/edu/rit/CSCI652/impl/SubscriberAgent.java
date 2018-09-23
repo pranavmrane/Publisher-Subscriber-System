@@ -21,6 +21,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
     private ServerSocket ss = null;
     static int numberOfThreads = 0;
     private int listeningPort = 0;
+    // Add Comment Here
     private String listeningAddress = "0.0.0.0";
     private String sendingAddress = "";
     private int sendingPort = 0;
@@ -165,12 +166,10 @@ public class SubscriberAgent extends Thread implements Subscriber {
 
     }
 
-    @Override
     /*
-     * The assumption here is that Subscriber will always have list of active
-     * topics
-     * This function uses the same numeric code as subscribe i.e. 2
-     * */
+    Iterate through every keyword for every topic
+    If keyword matches with request, subscribe to that topic
+    */
     public void subscribe(String keyword) {
         boolean foundStatus = false;
         for(Topic consideration: topicList){
@@ -226,6 +225,11 @@ public class SubscriberAgent extends Thread implements Subscriber {
             System.out.println("EventManager is down!");
         }
     }
+
+    /*
+    The implementation is different for getting subscribed Topics.
+    We are asking for and receiving data on the same port
+    */
 
     public Vector<String> getSubscribedTopics() {
         Vector<String> subscribedTopicsList = null;
