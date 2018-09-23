@@ -20,6 +20,7 @@ public class PublisherAgent extends Thread implements Publisher {
     private ServerSocket ss = null;
     static int numberOfThreads = 0;
     private int listeningPort = 0;
+    private String listeningAddress = "0.0.0.0";
     private String sendingAddress = "";
     private int sendingPort = 0;
     static private Vector<Topic> topicList = new Vector<Topic>();
@@ -32,8 +33,8 @@ public class PublisherAgent extends Thread implements Publisher {
         this.ss = ss;
     }
     /*
-    * Starts two threads. One to listen and other to accept orders
-    * */
+     * Starts two threads. One to listen and other to accept orders
+     * */
 
     public void setAddresses(int listeningPort, int threadCount,
                              String sendingAddress, int sendingPort){
@@ -78,7 +79,7 @@ public class PublisherAgent extends Thread implements Publisher {
     public void startService() {
         try {
             ss = new ServerSocket(listeningPort, 100, Inet4Address.getByName
-                    ("0.0.0.0"));
+                    (listeningAddress));
             PublisherAgent pub = new PublisherAgent(ss);
             pub.start();
 
@@ -102,7 +103,6 @@ public class PublisherAgent extends Thread implements Publisher {
                     topicList.add(newTopic);
                     System.out.println("Received new topic: " +
                             newTopic.getName());
-                    displayTopicWithNumbers();
                 }
                 // 999 -> Receiving topics list
                 else if (code == 999) {
@@ -132,7 +132,7 @@ public class PublisherAgent extends Thread implements Publisher {
             out.flush();
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("EventManager is down!");
         }
     }
 
@@ -152,7 +152,7 @@ public class PublisherAgent extends Thread implements Publisher {
             out.flush();
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("EventManager is down!");
         }
     }
 
@@ -170,7 +170,7 @@ public class PublisherAgent extends Thread implements Publisher {
                     ":" + this.listeningPort);
             out.flush();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("EventManager is down!");
         }
     }
 
@@ -195,15 +195,12 @@ public class PublisherAgent extends Thread implements Publisher {
                 args[2].equals("-threads") &&
                 args[4].equals("-eventManagerIP") &&
                 args[6].equals("-eventManagerPort")) {
-            try {
-                System.out.println("Setting Connection Variables:");
-                pubUI.setAddresses(Integer.parseInt(args[1]),
-                        Integer.parseInt(args[3]), args[5],
-                        Integer.parseInt(args[7]));
-                pubUI.printAddresses();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            System.out.println("Setting Connection Variables:");
+            pubUI.setAddresses(Integer.parseInt(args[1]),
+                    Integer.parseInt(args[3]), args[5],
+                    Integer.parseInt(args[7]));
+            pubUI.printAddresses();
+
         }
         else {
             System.err.println("Enter Command Like this: " +
@@ -221,16 +218,9 @@ public class PublisherAgent extends Thread implements Publisher {
 
         boolean loopStatus = true;
         sleep(2500);
-        try{
-            pubUI.ping();
-            //pubUI.advertise(new Topic(Arrays.asList("India", "USA"),
-            //        "World"));
-            //sleep(1500);
-            //pubUI.advertise(new Topic(Arrays.asList("India", "Europe"),
-            //        "Continent"));
-            sleep(1500);
-            while(loopStatus){
-                // All other codes used to identify operations
+        pubUI.ping();
+        while(loopStatus){
+            try{
 
                 System.out.println("Press 1 to Advertise New Topic");
                 System.out.println("Press 2 to Publish New Event");
@@ -258,25 +248,34 @@ public class PublisherAgent extends Thread implements Publisher {
                                 new Vector<String>(Arrays.asList(keywordsArray));
                         System.out.println("Generating new topic -> " + "Name: "
                                 + name + ", Keywords: " + keywords);
-                         pubUI.advertise(new Topic(keywordsList,name));
+                        pubUI.advertise(new Topic(keywordsList,name));
 
 
                         break;
                     case 2:
-                        System.out.println("Select Topic Id for The Event");
-                        pubUI.displayTopicWithNumbers();
-                        int topicId = sc.nextInt();
-                        // Moving Cursor to next line
-                        sc.nextLine();
-                        System.out.println("Enter Event Title");
-                        String eventTitle = sc.nextLine();
-                        System.out.println("Enter Content(String) for Event");
-                        String content = sc.nextLine();
-                        System.out.println("Generating new Event: "
-                                + "Title: " + eventTitle +
-                                ", Topic: " + topicList.get(topicId).getName() +
-                                ", Content: " + content);
-                        pubUI.publish(new Event(topicList.get(topicId), eventTitle, content));
+                        try {
+                            System.out.println("Select Topic Id for The Event");
+                            pubUI.displayTopicWithNumbers();
+                            int topicId = sc.nextInt();
+                            // Moving Cursor to next line
+                            sc.nextLine();
+                            System.out.println("Enter Event Title");
+                            String eventTitle = sc.nextLine();
+                            System.out.println("Enter Content(String) for Event");
+                            String content = sc.nextLine();
+                            System.out.println("Generating new Event: "
+                                    + "Title: " + eventTitle +
+                                    ", Topic: " +
+                                    topicList.get(topicId).getName() +
+                                    ", Content: " + content);
+                            pubUI.publish(new Event(topicList.get(topicId),
+                                    eventTitle, content));
+                        }
+                        catch (ArrayIndexOutOfBoundsException e){
+                            System.out.println("Start Again, Please Select " +
+                                    "Topic Id in Range");
+                        }
+
                         break;
                     case 3:
                         pubUI.ping();
@@ -290,15 +289,14 @@ public class PublisherAgent extends Thread implements Publisher {
                     default:
                         System.out.println("Please enter a correct value.");
                         break;
-                }// End of Switch Case
-            }// End of While Loop
-            sc.close();
-            System.out.println("Publisher Terminated");
-            System.exit(0);
-        }// End of Try
-        catch (Exception e){
-            System.out.println("Main Loop");
-            e.printStackTrace();
+                }
+            } catch (Exception e){
+                System.out.println("Main Loop");
+                e.printStackTrace();
+            }
         }
+        sc.close();
+        System.out.println("Publisher Terminated");
+        System.exit(0);
     }
 }

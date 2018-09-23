@@ -65,4 +65,10 @@ public class Event implements Serializable {
 		System.out.println("EVENT-> Title: " + this.title + ", Topic Name: "
 				+ this.getTopicName() + ", Content: " + this.content);
 	}
+
+
+	public String toString() {
+		return getTitle();
+	}
 }
+

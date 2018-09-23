@@ -21,6 +21,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
     private ServerSocket ss = null;
     static int numberOfThreads = 0;
     private int listeningPort = 0;
+    private String listeningAddress = "0.0.0.0";
     private String sendingAddress = "";
     private int sendingPort = 0;
     static private Vector<Topic> topicList = new Vector<Topic>();
@@ -63,21 +64,23 @@ public class SubscriberAgent extends Thread implements Subscriber {
     }
 
     public void printEventVectors(Vector<Event> list){
-        if(list!=null){
-            for(Event topic: list){
-                topic.printAllVariables();
-                System.out.println();
-            }
+        if (list == null) {
+            System.out.println("No Pending Events Available at this moment.");
+        }
+        else if (list.size() == 0) {
+            System.out.println("No Pending Events Available at this moment.");
         }
         else {
-            System.out.println("No Pending Events Available at this moment.");
+            for(Event topic: list){
+                topic.printAllVariables();
+            }
         }
     }
 
     public void startService() {
         try {
             ss = new ServerSocket(listeningPort, 100, Inet4Address.getByName
-                    ("0.0.0.0"));
+                    (listeningAddress));
             SubscriberAgent pub = new SubscriberAgent(ss);
             pub.start();
 
@@ -103,7 +106,6 @@ public class SubscriberAgent extends Thread implements Subscriber {
                     topicList.add(newTopic);
                     System.out.println("Received new topic named: " +
                             newTopic.getName());
-                    displayTopicWithNumbers();
                 }
                 // 1000 -> Receiving topics list and pending events if any.
                 else if (code == 1000) {
@@ -137,12 +139,11 @@ public class SubscriberAgent extends Thread implements Subscriber {
                     newEvent.printAllVariables();
                 }
             } catch (Exception e) {
-                System.out.println("Error Being Handled");
                 e.printStackTrace();
             }
         }
-
     }
+
     /*Connect to Event Manager and specify topic for subscription*/
     @Override
     public void subscribe(Topic topic) {
@@ -159,22 +160,27 @@ public class SubscriberAgent extends Thread implements Subscriber {
             out.writeObject(topic);
             out.flush();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("EventManager is down!");
         }
 
     }
 
     @Override
     /*
-    * The assumption here is that Subscriber will always have list of active
-    * topics
-    * This function uses the same numeric code as subscribe i.e. 2
-    * */
+     * The assumption here is that Subscriber will always have list of active
+     * topics
+     * This function uses the same numeric code as subscribe i.e. 2
+     * */
     public void subscribe(String keyword) {
+        boolean foundStatus = false;
         for(Topic consideration: topicList){
             if (consideration.checkIfKeyWordExists(keyword)){
+                foundStatus = true;
                 this.subscribe(consideration);
             }
+        }
+        if(!foundStatus){
+            System.out.println("Value entered NOT found, stick to original list");
         }
     }
 
@@ -196,7 +202,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
             out.writeObject(topic);
             out.flush();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("EventManager is down!");
         }
     }
 
@@ -217,7 +223,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
                     ":" + this.listeningPort);
             out.flush();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("EventManager is down!");
         }
     }
 
@@ -225,7 +231,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
         Vector<String> subscribedTopicsList = null;
         Socket clientSocket = null;
         try {
-            System.out.println("Getting Subscribed Topics ");
+            System.out.println("Getting Subscribed Topics...");
             clientSocket = new Socket(sendingAddress, sendingPort);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket
                     .getOutputStream());
@@ -239,7 +245,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
             subscribedTopicsList = (Vector<String>) in.readObject();
         }
         catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("EventManager is down!");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -248,8 +254,8 @@ public class SubscriberAgent extends Thread implements Subscriber {
 
     @Override
     /*
-    * This will access the copy out of subscribersInfo
-    * */
+     * This will access the copy out of subscribersInfo
+     * */
     public void listSubscribedTopics() {
         // System.out.println("listSubscribedTopics");
         Vector<String> subscribedTopicsList = this.getSubscribedTopics();
@@ -270,7 +276,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
             }
         }
         catch (Exception e){
-            e.printStackTrace();
+            System.out.println("EventManager is down!");
         }
     }
 
@@ -288,7 +294,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
                     ":" + this.listeningPort);
             out.flush();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("EventManager is down!");
         }
     }
 
@@ -332,15 +338,11 @@ public class SubscriberAgent extends Thread implements Subscriber {
                 args[2].equals("-threads") &&
                 args[4].equals("-eventManagerIP") &&
                 args[6].equals("-eventManagerPort")) {
-            try {
-                System.out.println("Setting Connection Variables:");
-                subUI.setAddresses(Integer.parseInt(args[1]),
-                        Integer.parseInt(args[3]), args[5],
-                        Integer.parseInt(args[7]));
-                subUI.printAddresses();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            System.out.println("Setting Connection Variables:");
+            subUI.setAddresses(Integer.parseInt(args[1]),
+                    Integer.parseInt(args[3]), args[5],
+                    Integer.parseInt(args[7]));
+            subUI.printAddresses();
         }
         else {
             System.err.println("Enter Command Like this: " +
@@ -357,10 +359,10 @@ public class SubscriberAgent extends Thread implements Subscriber {
         int userInput = 0;
         boolean loopStatus = true;
         sleep(2500);
-        try {
-            subUI.ping();
-            while (loopStatus) {
-                sleep(900);
+
+        subUI.ping();
+        while (loopStatus) {
+            try {
                 System.out.println("Press 1 to Subscribe to New Topic");
                 System.out.println("Press 2 to Subscribe to New Topic using " +
                         "Keyword");
@@ -377,16 +379,31 @@ public class SubscriberAgent extends Thread implements Subscriber {
                 switch (userInput) {
                     case 1:
                         System.out.println("Select Topic Id from list below:");
-                        subUI.displayTopicWithNumbers();
-                        int topicId0 = sc.nextInt();
-                        subUI.subscribe(topicList.get(topicId0));
+                        if(topicList.size()>0){
+                            subUI.displayTopicWithNumbers();
+                            int topicId0 = sc.nextInt();
+                            try {
+                                subUI.subscribe(topicList.get(topicId0));
+                            }
+                            catch (ArrayIndexOutOfBoundsException e){
+                                System.out.println("Please enter a value in range");
+                            }
+                        }
+                        else {
+                            System.out.println("No Topics Can be Selected Now");
+                        }
                         break;
                     case 2:
                         System.out.println("Write a keyword from list displayed " +
                                 "below");
-                        subUI.displayKeyWordsForTopics();
-                        String keyWordValue = sc.next();
-                        subUI.subscribe(keyWordValue);
+                        if(topicList.size()>0){
+                            subUI.displayKeyWordsForTopics();
+                            String keyWordValue = sc.next();
+                            subUI.subscribe(keyWordValue);
+                        }
+                        else {
+                            System.out.println("No KeyWords Can be Selected Now");
+                        }
                         break;
                     case 3:
                         subUI.listSubscribedTopics();
@@ -412,15 +429,13 @@ public class SubscriberAgent extends Thread implements Subscriber {
                     default:
                         System.out.println("Please enter a correct value");
                         break;
-                }// Switch End
-            }// While End
-            sc.close();
-            System.out.println("Subscriber Terminated");
-            System.exit(0);
-        }// Try End
-
-        catch (Exception e){
-            e.printStackTrace();
+                }
+            }catch (Exception e){
+                System.out.println("Invalid Input");
+            }
         }
+        sc.close();
+        System.out.println("Subscriber Terminated");
+        System.exit(0);
     }
 }

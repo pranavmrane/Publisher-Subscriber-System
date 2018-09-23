@@ -183,6 +183,12 @@ public class EventManager extends Thread {
                         // Presently no action taken with position of subscriber
                         subscribersInfo.put(subscriberId,
                                 new Vector<String>());
+                        for(String topicName: topicsInfo.keySet()){
+                            Vector<String> subscriberNamesForTopic =
+                                    topicsInfo.get(topicName);
+                            subscriberNamesForTopic.remove(subscriberId);
+                            topicsInfo.put(topicName, subscriberNamesForTopic);
+                        }
                     }
                     // 6 -> unsubscribe a specific topic
                     else if (code == 6) {
@@ -221,7 +227,7 @@ public class EventManager extends Thread {
      */
     private void notifySubscribers(Event event) {
         // Find index for event
-        System.out.println("Received new event: " + event);
+        System.out.println("Received new event: " + event.getTitle());
         String topicName = event.getTopicName();
         eventIndexLock.lock();
         int index = eventIndex.get(topicName);
@@ -283,36 +289,11 @@ public class EventManager extends Thread {
     }
 
     /*
-     * Send Back Subscription List Back to Subscriber
-     */
-    private void transmitSubscribedTopics(String recipient,
-                                          ArrayList<String> SubsTopicList) {
-        // System.out.println("transmitSubscribedTopics");
-        int port = 0;
-        Socket sendSocket;
-        String destination = "";
-        try {
-            destination = recipient.split(":")[0];
-            port = Integer.parseInt(recipient.split(":")[1]);
-            sendSocket = new Socket(destination, port);
-            ObjectOutputStream out = new ObjectOutputStream
-                    (sendSocket.getOutputStream());
-            // 4 -> supply subscribed topic list for Subscriber
-            out.writeObject(SubsTopicList);
-            out.close();
-        } catch (IOException e) {
-            // Subscriber is not expected to be offline
-            // Not sure if Subscriber can collapse just after sending request
-            e.printStackTrace();
-        }
-     }
-
-    /*
      * Provide Publisher with Topics list
      * Might be offline or new Publisher
      */
     private void pingPublisher(String publisherId) {
-        System.out.println("Publisher " + publisherId + " came online. " +
+        System.out.println("Publisher " + publisherId + " is Pinging. " +
                 "Sending" +
                 " list of topics.");
         String destination = publisherId.split(":")[0];
@@ -326,7 +307,7 @@ public class EventManager extends Thread {
             out.writeObject(topicList);
             out.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Publisher " + publisherId + " is offline.");
         }
     }
 
@@ -336,7 +317,7 @@ public class EventManager extends Thread {
      * Send pending events
      */
     private void pingSubscriber(String subscriberId) {
-        System.out.println("Subscriber " + subscriberId + " came online. " +
+        System.out.println("Subscriber " + subscriberId + " is Pinging. " +
                 "Sending list of topics.");
         String destination = subscriberId.split(":")[0];
         int port = Integer.parseInt(subscriberId.split(":")[1]);
@@ -347,33 +328,33 @@ public class EventManager extends Thread {
             // Sending subscriber list of topics and any pending events
             out.writeInt(1000);
             out.writeObject(topicList);
-
-            ConcurrentHashMap <Event, LocalDateTime> tmppendingEvents =
+            ConcurrentHashMap <Event, LocalDateTime> tmpPendingEvents =
                     pendingEvents.get(subscriberId);
+            // Debug print
+            System.out.println(pendingEvents);
 
             Vector<Event> eventList = null;
-            if(tmppendingEvents!=null){
+            if(tmpPendingEvents!=null){
                 // There is definitely something inside pending events
                 // Initialise Vector of Events to be passed
                 eventList = new Vector<Event>();
 
                 // Save all events with Pending List
-                for(Event pendingEvent: tmppendingEvents.keySet()){
+                for(Event pendingEvent: tmpPendingEvents.keySet()){
                     eventList.add(pendingEvent);
                 }
+                out.writeObject(eventList);
                 // Remove Subscriber for Pending List
                 pendingEvents.remove(subscriberId);
-                out.writeObject(eventList);
+                offlineSubscribers.remove(subscriberId);
             }
             else {
                 // Subscriber has no pending data
                 out.writeObject(eventList);
             }
-            // TODO: Send pending events when this subscriber was offline
-
         }
         catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Subscriber " + subscriberId + " is offline.");
         }
     }
 
@@ -417,7 +398,7 @@ public class EventManager extends Thread {
 //        System.out.println("<->: " + topicList);
 //        System.out.println("<-1->: " + topicName);
 
-        System.out.println("unsubscribeTopic");
+        // System.out.println("unsubscribeTopic");
         if (!subscribersInfo.containsKey(subscriberName)) {
             System.out.println("Subscriber Not Present");
             return;
@@ -432,6 +413,11 @@ public class EventManager extends Thread {
         Vector<String> subscriptions = subscribersInfo.get(subscriberName);
         subscriptions.remove(topicName.getName());
         subscribersInfo.put(subscriberName, subscriptions);
+
+        Vector<String> subscriberNames = topicsInfo.get(topicName.getName());
+        subscriberNames.remove(subscriberName);
+        topicsInfo.put(topicName.getName(), subscriberNames);
+
     }
 
     /*
@@ -454,16 +440,15 @@ public class EventManager extends Thread {
             this.topicsInfo.put(topic.getName(), new Vector<String>());
             this.topicList.add(topic);
             this.eventIndex.put(topic.getName(), 1);
-            printTopicsHashmap();
-            // TODO: Broadcast to everyone
+            // printTopicsHashmap();
             Socket sendSocket;
             String destination;
             int port;
             // The code below works as expected
-            for (String s : publishersInfo) {
+            for (String publisher : publishersInfo) {
                 try {
-                    destination = s.split(":")[0];
-                    port = Integer.parseInt(s.split(":")[1]);
+                    destination = publisher.split(":")[0];
+                    port = Integer.parseInt(publisher.split(":")[1]);
                     sendSocket = new Socket(destination, port);
                     ObjectOutputStream out = new ObjectOutputStream
                             (sendSocket.getOutputStream());
@@ -473,33 +458,37 @@ public class EventManager extends Thread {
                     out.flush();
                     out.close();
                 } catch (IOException e) {
-                    // TODO: Publisher is offline. Handle it!
-                    e.printStackTrace();
+                    System.out.println("Publisher " + publisher + " is offline.");
                 }
             }
 
             // There is a definite issue in the code below
             // Information doesn't get transmitted
             // The most common solution online is adding flush
-            for (String s : subscribersInfo.keySet()) {
-                try {
-                    destination = s.split(":")[0];
-                    port = Integer.parseInt(s.split(":")[1]);
-                    sendSocket = new Socket(destination, port);
-                    ObjectOutputStream out = new ObjectOutputStream
-                            (sendSocket.getOutputStream());
-                    // 1 -> Advertising new topic
-                    out.writeInt(1);
-                    out.writeObject(topic);
-                    out.flush();
-                    out.close();
-                } catch (IOException e) {
-                    // TODO: Subscriber is offline. Handle it!
-                    // e.printStackTrace();
-                    System.out.println("Subscriber " + s + " is offline.");
-                    offlineSubscribers.add(s);
-                    pendingEvents.put(s, new ConcurrentHashMap<Event,
-                            LocalDateTime>());
+
+            for (String subscriber : subscribersInfo.keySet()) {
+                if (!offlineSubscribers.contains(subscriber)) {
+                    try {
+                        destination = subscriber.split(":")[0];
+                        port = Integer.parseInt(subscriber.split(":")[1]);
+                        sendSocket = new Socket(destination, port);
+                        ObjectOutputStream out = new ObjectOutputStream
+                                (sendSocket.getOutputStream());
+                        // 1 -> Advertising new topic
+                        out.writeInt(1);
+                        out.writeObject(topic);
+                        out.flush();
+                        out.close();
+                    } catch (IOException e) {
+                        System.out.println("Subscriber " + subscriber + " is " +
+                                "offline.");
+
+                        if(!pendingEvents.contains(subscriber)){
+                            offlineSubscribers.add(subscriber);
+                            ConcurrentHashMap<Event, LocalDateTime> dataForNewSubs = new ConcurrentHashMap<Event, LocalDateTime>();
+                            pendingEvents.put(subscriber, dataForNewSubs);
+                        }
+                    }
                 }
             }
         }
@@ -537,20 +526,6 @@ public class EventManager extends Thread {
             topicInfo.add(sub);
             topicsInfo.put(topicName, topicInfo);
         }
-
-        System.out.println("Current subscribers list: ");
-        printSubscribersHashmap();
-
-        try{
-            sleep(2000);
-        }
-        catch (InterruptedException e){
-            e.printStackTrace();
-        }
-
-        System.out.println("Current subscribers per topic: ");
-        printTopicsHashmap();
-
     }
 
     /*
@@ -562,23 +537,31 @@ public class EventManager extends Thread {
     private void removeSubscriber(String droppedSubscriber) {
         // System.out.println("removeSubscriber");
         subscribersInfo.remove(droppedSubscriber);
-        topicsInfo.remove(droppedSubscriber);
+        for(String topicName: topicsInfo.keySet()){
+            Vector<String> subscriberNamesForTopic =
+                    topicsInfo.get(topicName);
+            subscriberNamesForTopic.remove(droppedSubscriber);
+            topicsInfo.put(topicName, subscriberNamesForTopic);
+        }
         System.out.println(droppedSubscriber + " is removed");
-        printSubscribersHashmap();
     }
 
     /*
      * show the list of subscriber for a specified topic
      */
     private void showSubscribers(Topic topic) {
-        System.out.println("showSubscribers");
         // Hashmap will contain Subscribers and Positions
         // We need only Subscriber names
         Vector<String> subscribersForTopic =
                 topicsInfo.get(topic.getName());
 
-        for (String key : subscribersForTopic) {
-            System.out.println(key);
+        if (subscribersForTopic.size() == 0) {
+            System.out.println("There are no subscribers for this topic.");
+        }
+        else {
+            for (String key : subscribersForTopic) {
+                System.out.println(key);
+            }
         }
     }
 
@@ -587,7 +570,8 @@ public class EventManager extends Thread {
         if(topicList.size() == 0) {
             System.out.println("No Topics Present");
         }
-        else{
+        else {
+            System.out.println("The Topics Available are:");
             for (int i=0; i<topicList.size(); i++){
                 System.out.println(i + ":" + topicList.get(i).getName());
             }
@@ -601,14 +585,10 @@ public class EventManager extends Thread {
         if (args.length==6 && args[0].equals("-port") &&
                 args[2].equals("-threads") &&
                 args[4].equals("-eventManagerIP")) {
-            try {
-                System.out.println("Setting Connection Variables:");
-                eventManager.setAddresses(Integer.parseInt(args[1]),
-                        Integer.parseInt(args[3]), args[5]);
-                eventManager.printAddresses();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            System.out.println("Setting Connection Variables:");
+            eventManager.setAddresses(Integer.parseInt(args[1]),
+                    Integer.parseInt(args[3]), args[5]);
+            eventManager.printAddresses();
         }
         else {
             System.err.println("Enter Command Like this: " +
@@ -626,12 +606,15 @@ public class EventManager extends Thread {
         int userInput = 0;
         boolean loopStatus = true;
 
-        try {
-            while (loopStatus) {
+        while (loopStatus) {
+            try {
+
                 System.out.println("Press 1 to remove Subscribers");
-                System.out.println("Press 2 to Show Subscriber for a topic");
+                System.out.println("Press 2 to show Subscriber for a topic");
                 System.out.println("Press 3 to view topics");
-                System.out.println("Press 4 to Exit the loop");
+                System.out.println("Press 4 to view Publishers");
+                System.out.println("Press 5 to view Pending Events ");
+                System.out.println("Press 6 to Exit the loop");
                 System.out.println("Please select an option: ");
 
                 userInput = sc.nextInt();
@@ -644,14 +627,20 @@ public class EventManager extends Thread {
                             int index = 0;
                             ArrayList<String> subscriberNames =
                                     new ArrayList<String>();
+
                             for(String subscriberName: subscribersInfo.keySet()){
-                                System.out.println("" + index + ":"
+                                System.out.println("" + index++ + ":"
                                         + subscriberName);
                                 subscriberNames.add(subscriberName);
                             }
                             int subscriberIndex = sc.nextInt();
-                            eventManager.removeSubscriber(subscriberNames.
-                                    get(subscriberIndex));
+                            try {
+                                eventManager.removeSubscriber(subscriberNames.
+                                        get(subscriberIndex));
+                            }
+                            catch (ArrayIndexOutOfBoundsException e){
+                                System.out.println("Please enter a value in range");
+                            }
                         }
                         else {
                             System.out.println("No Subscribers Present");
@@ -666,25 +655,38 @@ public class EventManager extends Thread {
                         else {
                             eventManager.displayTopicWithNumbers();
                             int topicId = sc.nextInt();
-                            eventManager.showSubscribers(topicList.get(topicId));
+                            try {
+                                System.out.println("Subscribers for the topic " +
+                                    "are:");
+                                eventManager.showSubscribers(topicList.get(topicId));
+                            }
+                            catch (ArrayIndexOutOfBoundsException e){
+                                System.out.println("Please enter a value in range");
+                            }
                         }
                         break;
                     case 3:
                         eventManager.displayTopicWithNumbers();
                         break;
                     case 4:
+                        System.out.println("List of publishers: ");
+                        System.out.println(publishersInfo);
+                        break;
+                    case 5:
+                        System.out.println("Pending Events data dump: ");
+                        System.out.println(pendingEvents);
+                        break;
+                    case 6:
                         loopStatus = false;
                         break;
-                }// End of Switch
-            }// End Of While
-            sc.close();
-            System.out.println("Event Manager Terminated");
-            System.exit(0);
-        }// End of Try
-        catch (Exception e){
-
+                }
+            } catch (Exception e){
+                System.out.println("Invalid input.");
+            }
         }
-
+        sc.close();
+        System.out.println("Event Manager Terminated");
+        System.exit(0);
     }
 }
 
@@ -694,7 +696,7 @@ class GarbageCollector extends Thread{
         LocalDateTime timeRightNow = null;
         try {
             while (true){
-                sleep(5*60*1000);
+                sleep(60*1000);
                 System.out.println("Garbage Collecter Active");
                 for(String subscriberName : EventManager.pendingEvents.keySet()){
                     ConcurrentHashMap<Event, LocalDateTime> eventHistory =

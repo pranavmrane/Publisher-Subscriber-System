@@ -11,3 +11,4 @@ public interface Publisher {
 	 */
 	public void advertise(Topic newTopic);
 }
+
