@@ -17,12 +17,13 @@ import java.util.Scanner;
 
 public class PublisherAgent extends Thread implements Publisher {
 
+    // Server parameters
     private ServerSocket ss = null;
     static int numberOfThreads = 0;
     private int listeningPort = 0;
-    // Add Comment Here
     private String listeningAddress = "0.0.0.0";
     private String sendingAddress = "";
+
     private int sendingPort = 0;
     static private Vector<Topic> topicList = new Vector<Topic>();
 
@@ -33,10 +34,8 @@ public class PublisherAgent extends Thread implements Publisher {
     public PublisherAgent(ServerSocket ss) {
         this.ss = ss;
     }
-    /*
-     * Starts two threads. One to listen and other to accept orders
-     * */
 
+    // Sets server parameters.
     public void setAddresses(int listeningPort, int threadCount,
                              String sendingAddress, int sendingPort){
 
@@ -46,6 +45,7 @@ public class PublisherAgent extends Thread implements Publisher {
         this.sendingPort = sendingPort;
     }
 
+    // Prints server parameters.
     public void printAddresses(){
         System.out.println("Listening Port: " + listeningPort);
         System.out.println("Thread Count: " + numberOfThreads);
@@ -53,8 +53,10 @@ public class PublisherAgent extends Thread implements Publisher {
         System.out.println("Sending Port: " + sendingPort);
     }
 
+    /*
+     * Prints topic information.
+     */
     public void printTopicVectors(Vector<Topic> list){
-
         if(list.size() > 0){
             for(Topic topic: list){
                 topic.printAllVariables();
@@ -65,18 +67,10 @@ public class PublisherAgent extends Thread implements Publisher {
         }
     }
 
-    public void printEventVectors(Vector<Event> list){
-
-        if(list!=null){
-            for(Event topic: list){
-                topic.printAllVariables();
-            }
-        }
-        else {
-            System.out.println("No Pending Events Available at this moment");
-        }
-    }
-
+    /*
+     * Starts new thread to listen for communication from Event Manager.
+     * Main thread runs the UI.
+     * */
     public void startService() {
         try {
             ss = new ServerSocket(listeningPort, 100, Inet4Address.getByName
@@ -89,6 +83,9 @@ public class PublisherAgent extends Thread implements Publisher {
         }
     }
 
+    /*
+     * Listening for connections from EventManager.
+     */
     public void run() {
         System.out.println("Publisher listening.");
         while (true) {
@@ -117,7 +114,9 @@ public class PublisherAgent extends Thread implements Publisher {
         }
     }
 
-    /*Send info about new event*/
+    /*
+     * Publishes new event
+     */
     @Override
     public void publish(Event event) {
         Socket clientSocket = null;
@@ -126,9 +125,8 @@ public class PublisherAgent extends Thread implements Publisher {
             clientSocket = new Socket(sendingAddress, sendingPort);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket
                     .getOutputStream());
+            // 3 -> Publish new event
             out.writeInt(3);
-            //out.writeUTF(Inet4Address.getLocalHost().getHostAddress() +
-            //        ":" + this.listeningPort);
             out.writeObject(event);
             out.flush();
 
@@ -137,7 +135,9 @@ public class PublisherAgent extends Thread implements Publisher {
         }
     }
 
-    /*Send New Topics Created to Event Manager*/
+    /*
+     * Advertise a new topic
+     */
     @Override
     public void advertise(Topic newTopic) {
         Socket clientSocket = null;
@@ -146,6 +146,7 @@ public class PublisherAgent extends Thread implements Publisher {
             clientSocket = new Socket(sendingAddress, sendingPort);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket
                     .getOutputStream());
+            // 1 -> Advertise new topic
             out.writeInt(1);
             out.writeUTF(Inet4Address.getLocalHost().getHostAddress() +
                     ":" + this.listeningPort);
@@ -157,8 +158,9 @@ public class PublisherAgent extends Thread implements Publisher {
         }
     }
 
-    /*Connect and register network*/
-
+    /*
+     * Ping EventManager and fetch latest information.
+     */
     public void ping() {
         Socket clientSocket = null;
         try {
@@ -175,7 +177,9 @@ public class PublisherAgent extends Thread implements Publisher {
         }
     }
 
-    /*Displays all the topics ever registered with event manager*/
+    /*
+     * Displays the list of topics.
+     */
     private void displayTopicWithNumbers (){
         if(topicList.size() == 0) {
             System.out.println("No Topics Present");
@@ -213,6 +217,7 @@ public class PublisherAgent extends Thread implements Publisher {
             pubUI.printAddresses();
         }
 
+        // Listen for connections from EventManager
         pubUI.startService();
         Scanner sc = new Scanner(System.in);
         int userInput = 0;
@@ -233,6 +238,7 @@ public class PublisherAgent extends Thread implements Publisher {
                 userInput = sc.nextInt();
 
                 switch (userInput){
+                    // Advertise new topic
                     case 1:
                         // Moving Cursor to next line
                         sc.nextLine();
@@ -250,9 +256,8 @@ public class PublisherAgent extends Thread implements Publisher {
                         System.out.println("Generating new topic -> " + "Name: "
                                 + name + ", Keywords: " + keywords);
                         pubUI.advertise(new Topic(keywordsList,name));
-
-
                         break;
+                    // Publish new event
                     case 2:
                         try {
                             System.out.println("Select Topic Id for The Event");
@@ -278,12 +283,15 @@ public class PublisherAgent extends Thread implements Publisher {
                         }
 
                         break;
+                    // Ping the event manager
                     case 3:
                         pubUI.ping();
                         break;
+                    // Print the list of topics
                     case 4:
                         pubUI.displayTopicWithNumbers();
                         break;
+                    // Exit
                     case 5:
                         loopStatus = false;
                         break;

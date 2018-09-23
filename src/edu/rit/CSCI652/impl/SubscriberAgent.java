@@ -4,8 +4,6 @@ import edu.rit.CSCI652.demo.Event;
 import edu.rit.CSCI652.demo.Subscriber;
 import edu.rit.CSCI652.demo.Topic;
 
-import javax.annotation.processing.SupportedSourceVersion;
-import javax.rmi.ssl.SslRMIClientSocketFactory;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -13,18 +11,19 @@ import java.net.Inet4Address;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Vector;
-import java.util.Arrays;
 import java.util.Scanner;
-import java.util.Vector;
 
 public class SubscriberAgent extends Thread implements Subscriber {
+
+    // Server parameters
     private ServerSocket ss = null;
     static int numberOfThreads = 0;
     private int listeningPort = 0;
-    // Add Comment Here
     private String listeningAddress = "0.0.0.0";
     private String sendingAddress = "";
     private int sendingPort = 0;
+
+
     static private Vector<Topic> topicList = new Vector<Topic>();
 
     public SubscriberAgent() {
@@ -35,6 +34,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
         this.ss = ss;
     }
 
+    // Sets server parameters.
     public void setAddresses(int listeningPort, int threadCount,
                              String sendingAddress, int sendingPort){
 
@@ -44,6 +44,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
         this.sendingPort = sendingPort;
     }
 
+    // Prints server parameters.
     public void printAddresses(){
         System.out.println("Listening Port: " + listeningPort);
         System.out.println("Thread Count: " + numberOfThreads);
@@ -51,12 +52,14 @@ public class SubscriberAgent extends Thread implements Subscriber {
         System.out.println("Sending Port: " + sendingPort);
     }
 
+    /*
+     * Prints topic information.
+     */
     public void printTopicVectors(Vector<Topic> list){
 
         if(list.size() > 0){
             for(Topic topic: list){
                 topic.printAllVariables();
-                //System.out.println();
             }
         }
         else {
@@ -64,6 +67,9 @@ public class SubscriberAgent extends Thread implements Subscriber {
         }
     }
 
+    /*
+     * Prints events information
+     */
     public void printEventVectors(Vector<Event> list){
         if (list == null) {
             System.out.println("No Pending Events Available at this moment.");
@@ -78,6 +84,10 @@ public class SubscriberAgent extends Thread implements Subscriber {
         }
     }
 
+    /*
+     * Starts new thread to listen for communication from Event Manager.
+     * Main thread runs the UI.
+     * */
     public void startService() {
         try {
             ss = new ServerSocket(listeningPort, 100, Inet4Address.getByName
@@ -90,6 +100,9 @@ public class SubscriberAgent extends Thread implements Subscriber {
         }
     }
 
+    /*
+     * Listening for connections from EventManager.
+     */
     public void run() {
         System.out.println("Subscriber listening.");
         while (true) {
@@ -129,8 +142,6 @@ public class SubscriberAgent extends Thread implements Subscriber {
                         System.out.println("The Subscribed Topic List is:");
                         this.printList(subscribedTopicsList);
                     }
-
-
                 }
                 // 3-> Receiving Events
                 else if (code == 3){
@@ -145,7 +156,9 @@ public class SubscriberAgent extends Thread implements Subscriber {
         }
     }
 
-    /*Connect to Event Manager and specify topic for subscription*/
+    /*
+     * Connect to Event Manager and subscribe to topic
+     */
     @Override
     public void subscribe(Topic topic) {
         Socket clientSocket = null;
@@ -167,9 +180,9 @@ public class SubscriberAgent extends Thread implements Subscriber {
     }
 
     /*
-    Iterate through every keyword for every topic
-    If keyword matches with request, subscribe to that topic
-    */
+     * Iterate through every keyword for every topic
+     * If keyword matches with request, subscribe to that topic
+     */
     public void subscribe(String keyword) {
         boolean foundStatus = false;
         for(Topic consideration: topicList){
@@ -183,11 +196,9 @@ public class SubscriberAgent extends Thread implements Subscriber {
         }
     }
 
-    /*Unsubscribe with topic*/
-
+    /* Unsubscribe with topic */
     @Override
     public void unsubscribe(Topic topic) {
-        // System.out.println("unsubscribe:topic");
         Socket clientSocket = null;
         try {
             System.out.println("Unsubscribing from topic: " + topic.getName());
@@ -205,11 +216,9 @@ public class SubscriberAgent extends Thread implements Subscriber {
         }
     }
 
-    /*Unsubscribe from all topics*/
-
+    /* Unsubscribe from all topics */
     @Override
     public void unsubscribe() {
-        // System.out.println("unsubscribe");
         Socket clientSocket = null;
         try {
             System.out.println("Unsubscribing from all topics ");
@@ -227,10 +236,9 @@ public class SubscriberAgent extends Thread implements Subscriber {
     }
 
     /*
-    The implementation is different for getting subscribed Topics.
-    We are asking for and receiving data on the same port
-    */
-
+     * The implementation is different for getting subscribed Topics.
+     * We are asking for and receiving data on the same port
+     */
     public Vector<String> getSubscribedTopics() {
         Vector<String> subscribedTopicsList = null;
         Socket clientSocket = null;
@@ -261,7 +269,6 @@ public class SubscriberAgent extends Thread implements Subscriber {
      * This will access the copy out of subscribersInfo
      * */
     public void listSubscribedTopics() {
-        // System.out.println("listSubscribedTopics");
         Vector<String> subscribedTopicsList = this.getSubscribedTopics();
 
         try {
@@ -284,8 +291,9 @@ public class SubscriberAgent extends Thread implements Subscriber {
         }
     }
 
-    /*Connect and register network*/
-
+    /*
+     * Ping EventManager and fetch latest information.
+     */
     public void ping() {
         Socket clientSocket = null;
         try {
@@ -302,10 +310,8 @@ public class SubscriberAgent extends Thread implements Subscriber {
         }
     }
 
-    /*Simple Function to print a List of Strings*/
-
+    /* Simple Function to print a List of Strings */
     private void printList(Vector<String> contentList){
-        // System.out.println("printList");
         int i = 0;
         for(String content : contentList) {
             System.out.println("" + i + ":" + content);
@@ -335,7 +341,6 @@ public class SubscriberAgent extends Thread implements Subscriber {
     }
 
     public static void main(String[] args) throws InterruptedException {
-
         SubscriberAgent subUI = new SubscriberAgent();
 
         if (args.length==8 && args[0].equals("-port") &&
@@ -381,6 +386,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
                 userInput = sc.nextInt();
 
                 switch (userInput) {
+                    // Subsribe to new topic
                     case 1:
                         System.out.println("Select Topic Id from list below:");
                         if(topicList.size()>0){
@@ -397,6 +403,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
                             System.out.println("No Topics Can be Selected Now");
                         }
                         break;
+                    // Subscribe to new topic with keyword
                     case 2:
                         System.out.println("Write a keyword from list displayed " +
                                 "below");
@@ -409,12 +416,15 @@ public class SubscriberAgent extends Thread implements Subscriber {
                             System.out.println("No KeyWords Can be Selected Now");
                         }
                         break;
+                    // Fetch list of subscribed topics
                     case 3:
                         subUI.listSubscribedTopics();
                         break;
+                    // Unsubscribe all topics
                     case 4:
                         subUI.unsubscribe();
                         break;
+                    // Unsubscribe from given topic
                     case 5:
                         System.out.println("Select Topic Id for The Event");
                         Vector<String> subscribedTopics = subUI.getSubscribedTopics();
@@ -422,11 +432,14 @@ public class SubscriberAgent extends Thread implements Subscriber {
                         Topic topic = new Topic(subscribedTopics.get(sc.nextInt()));
                         subUI.unsubscribe(topic);
                         break;
+                    // Ping event manager
                     case 6:
                         subUI.ping();
+                    // Display list of topics
                     case 7:
                         subUI.displayTopicWithNumbers();
                         break;
+                    // Exit
                     case 8:
                         loopStatus = false;
                         break;

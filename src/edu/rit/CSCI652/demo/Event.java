@@ -1,7 +1,6 @@
 package edu.rit.CSCI652.demo;
 
 import java.io.Serializable;
-import java.util.List;
 
 public class Event implements Serializable {
 
@@ -11,27 +10,15 @@ public class Event implements Serializable {
 	private String title;
 	private String content;
 
+	public Event() {
+
+	}
+
     public Event(Topic topic, String title, String content){
         this.topic = topic;
         this.title = title;
         this.content = content;
     }
-
-	public Event(int id, Topic topic, String title, String content){
-	    this.id = id;
-	    this.topic = topic;
-	    this.title = title;
-	    this.content = content;
-    }
-	public Event() {
-
-	}
-
-	public Event(String title, Topic topic, String content) {
-		this.title = title;
-		this.topic = topic;
-		this.content = content;
-	}
 
 	public int getId() {
 		return this.id;
@@ -58,14 +45,9 @@ public class Event implements Serializable {
 	}
 
 	public void printAllVariables(){
-		//System.out.println("\tEvent ID: " + this.id);
-		//System.out.println("\tEvent Title: " + this.title);
-		//System.out.println("\tEvent Topic: " + this.getTopicName());
-		//System.out.println("\tEvent Content: " + this.content);
 		System.out.println("EVENT-> Title: " + this.title + ", Topic Name: "
 				+ this.getTopicName() + ", Content: " + this.content);
 	}
-
 
 	public String toString() {
 		return getTitle();
