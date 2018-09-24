@@ -7,8 +7,8 @@ Steps to compile code and run single instance of EventManager, PublisherAgent an
 ```
 1) git clone https://gitlab.com/brat197/pubsub.git
 2) cd pubsub
-3) javac -cp 'src/' src/edu/rit/CSCI652/demo/*
-4) javac -cp 'src/' src/edu/rit/CSCI652/impl/*
+3) javac -cp 'src/' src/edu/rit/CSCI652/demo/*.java
+4) javac -cp 'src/' src/edu/rit/CSCI652/impl/*.java
 5) java -cp 'src/' src.edu.rit.CSCI652.impl.EventManager -port 4444 -threads 4 -eventManagerIP 0.0.0.0
 6) java -cp 'src/' src.edu.rit.CSCI652.impl.PublisherAgent -port 10000 -threads 2 -eventManagerIP 127.0.0.1 -eventManagerPort 4444
 7) java -cp 'src/' src.edu.rit.CSCI652.impl.SubscriberAgent -port 11000 -threads 2 -eventManagerIP 127.0.0.1 -eventManagerPort 4444

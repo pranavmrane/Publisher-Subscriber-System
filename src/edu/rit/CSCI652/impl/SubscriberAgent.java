@@ -449,6 +449,7 @@ public class SubscriberAgent extends Thread implements Subscriber {
                 }
             }catch (Exception e){
                 System.out.println("Invalid Input");
+                sc.nextLine();
             }
         }
         sc.close();

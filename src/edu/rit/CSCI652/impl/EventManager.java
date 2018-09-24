@@ -637,6 +637,7 @@ public class EventManager extends Thread {
                 }
             } catch (Exception e){
                 System.out.println("Invalid input.");
+                sc.nextLine();
             }
         }
         sc.close();

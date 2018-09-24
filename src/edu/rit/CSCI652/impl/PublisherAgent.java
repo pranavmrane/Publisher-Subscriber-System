@@ -300,8 +300,8 @@ public class PublisherAgent extends Thread implements Publisher {
                         break;
                 }
             } catch (Exception e){
-                System.out.println("Main Loop");
-                e.printStackTrace();
+                System.out.println("Invalid Input");
+                sc.nextLine();
             }
         }
         sc.close();
