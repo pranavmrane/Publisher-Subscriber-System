@@ -1,12 +1,16 @@
-# PubSub
+# Pre-Requisites
+* JDK
+* Docker
+
+# Publisher Subscriber System
 
 A Publisher Subscriber application with a centralized multi-threaded Event Manager. The Event Manager handles offline Publishers and Subscribers by queueing the events that are to be sent to the offline entity. 
 
 ## Running on Linux command line:
 Steps to compile code and run single instance of EventManager, PublisherAgent and SubscriberAgent.
 ```
-1) git clone https://gitlab.com/brat197/pubsub.git
-2) cd pubsub
+1) git clone https://github.com/pranavmrane/Publisher-Subscriber-System.git
+2) cd Publisher-Subscriber-System
 3) javac -cp 'src/' src/edu/rit/CSCI652/demo/*.java
 4) javac -cp 'src/' src/edu/rit/CSCI652/impl/*.java
 5) java -cp 'src/' src.edu.rit.CSCI652.impl.EventManager -port 4444 -threads 4 -eventManagerIP 0.0.0.0
@@ -17,7 +21,7 @@ Steps to compile code and run single instance of EventManager, PublisherAgent an
 ## Running the application on Docker:
 With a working installation of docker. Create a new network so that we can get control on what IP the Event Manager will listen on.
 ```
-1) cd pubsub
+1) cd Publisher-Subscriber-System
 2) docker build -f Dockerfile -t demo/pubsub .
 3) docker network create --subnet=172.18.0.0/16 mynet123
 4) For EventManager run:
